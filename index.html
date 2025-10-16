@@ -13,14 +13,16 @@ button { padding: 6px 12px; margin: 5px; border: none; border-radius: 6px; backg
 button:disabled { background-color: #ccc; cursor: not-allowed; }
 table { border-collapse: collapse; margin-top: 10px; width: 100%; }
 th, td { border: 1px solid #999; padding: 5px; text-align: center; }
+canvas { display:none; margin-top:10px; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
 <h1>Capabilidade do Processo – Cp e Cpk</h1>
 
-<div style="margin-bottom:20px;">
+<div>
 <label>Nome do estudante: <input type="text" id="studentName" placeholder="Digite seu nome"></label>
 </div>
 
@@ -52,27 +54,39 @@ th, td { border: 1px solid #999; padding: 5px; text-align: center; }
 <label>Senha: <input type="password" id="profPassword"></label>
 <button onclick="ativarProfessor()">Ativar Módulo Professor</button>
 <div id="feedbackProf"></div>
+</div>
+
+<div class="step">
+<h3>Gráficos de Controle</h3>
+<canvas id="rChart" width="600" height="300"></canvas>
+<canvas id="xBarChart" width="600" height="300"></canvas>
+</div>
+
+<div class="step">
+<h3>Resultado Final</h3>
+<button onclick="mostrarNota()">Mostrar Resultado</button>
+<div id="feedbackFinal"></div>
 <button onclick="gerarPDF()">Gerar Relatório PDF</button>
 </div>
 
 <script>
-// Variáveis
 let n=0, k=0;
-let passosCorretos = [false,false,false]; // 0-Médias/R, 1-Cp, 2-Cpk
-const d2_table = {2:1.128,3:1.693,4:2.059,5:2.326,6:2.534,7:2.704,8:2.847,9:2.970,10:3.078,11:3.173,12:3.258,13:3.336,14:3.407,15:3.472};
+let passosCorretos=[false,false,false]; // 0-Médias/R, 1-Cp, 2-Cpk
+let rChartObj=null, xBarChartObj=null;
+const d2_table={2:1.128,3:1.693,4:2.059,5:2.326,6:2.534,7:2.704,8:2.847,9:2.970,10:3.078,11:3.173,12:3.258,13:3.336,14:3.407,15:3.472};
 
 // Gera tabela
 function gerarTabela(){
-    n = parseInt(document.getElementById('sampleSize').value);
-    k = parseInt(document.getElementById('numSamples').value);
+    n=parseInt(document.getElementById('sampleSize').value);
+    k=parseInt(document.getElementById('numSamples').value);
     if(isNaN(n)||isNaN(k)||n<2||n>15||k<1){ alert("Digite valores válidos!"); return; }
 
-    const table = document.getElementById('sampleTable');
+    const table=document.getElementById('sampleTable');
     table.innerHTML="";
     let thead="<tr><th>Amostra</th>";
     for(let j=1;j<=n;j++) thead+=`<th>X${j}</th>`;
     thead+="<th>X̄</th><th>R</th></tr>";
-    table.innerHTML += thead;
+    table.innerHTML+=thead;
 
     for(let i=1;i<=k;i++){
         let row=`<tr><td>${i}</td>`;
@@ -125,10 +139,8 @@ function verificarCpCpk(){
 
     const tol=0.01;
     let feedback="";
-
     if(Math.abs(cp-cpCorreto)<=tol) passosCorretos[1]=true; else passosCorretos[1]=false;
     if(Math.abs(cpk-cpkCorreto)<=tol) passosCorretos[2]=true; else passosCorretos[2]=false;
-
     feedback+=`Cp esperado ≈ ${cpCorreto.toFixed(3)}<br>`;
     feedback+=`Cpk esperado ≈ ${cpkCorreto.toFixed(3)}<br>`;
     document.getElementById('feedbackCpCpk').innerHTML=feedback;
@@ -138,6 +150,7 @@ function verificarCpCpk(){
 function ativarProfessor(){
     const senha=document.getElementById('profPassword').value;
     if(senha!=='2806ANdr*'){ alert("Senha incorreta"); return; }
+
     let medias=[], rValues=[];
     for(let i=1;i<=k;i++){
         let valores=[];
@@ -149,14 +162,20 @@ function ativarProfessor(){
         document.getElementById(`media_${i}`).value=media.toFixed(3);
         document.getElementById(`r_${i}`).value=amplitude.toFixed(3);
     }
+
     const xBarGlobal=medias.reduce((a,b)=>a+b,0)/k;
     const rBarGlobal=rValues.reduce((a,b)=>a+b,0)/k;
     document.getElementById('feedbackProf').innerHTML=`✔️ Módulo professor ativo<br>X̄ global = ${xBarGlobal.toFixed(3)}, R̄ = ${rBarGlobal.toFixed(3)}`;
-    // Calcula Cp e Cpk somente se LSL e USL preenchidos
+
+    // Gráficos
+    gerarGraficoR(rValues, rBarGlobal);
+    gerarGraficoXBar(medias, xBarGlobal);
+
+    // Cp/Cpk automático
     const lsl=parseFloat(document.getElementById('lsl').value);
     const usl=parseFloat(document.getElementById('usl').value);
-    const sigma=rBarGlobal/d2_table[n];
     if(!isNaN(lsl)&&!isNaN(usl)){
+        const sigma=rBarGlobal/d2_table[n];
         const cp=(usl-lsl)/(6*sigma);
         const cpk=Math.min((usl-xBarGlobal)/(3*sigma),(xBarGlobal-lsl)/(3*sigma));
         document.getElementById('cpAluno').value=cp.toFixed(3);
@@ -164,10 +183,42 @@ function ativarProfessor(){
     }
 }
 
+// Gráficos
+function gerarGraficoR(rValues, rBar){
+    const ctx=document.getElementById('rChart').getContext('2d');
+    document.getElementById('rChart').style.display='block';
+    const lsc=rBar+3*(rBar/d2_table[n]);
+    const lic=Math.max(rBar-3*(rBar/d2_table[n]),0);
+    if(rChartObj) rChartObj.destroy();
+    rChartObj=new Chart(ctx,{
+        type:'line',
+        data:{labels:rValues.map((_,i)=>i+1), datasets:[{label:'R',data:rValues,borderColor:'blue',fill:false}]},
+        options:{plugins:{title:{display:true,text:'Gráfico de R'}},scales:{y:{min:0}}}
+    });
+}
+
+function gerarGraficoXBar(medias, xBar){
+    const ctx=document.getElementById('xBarChart').getContext('2d');
+    document.getElementById('xBarChart').style.display='block';
+    if(xBarChartObj) xBarChartObj.destroy();
+    xBarChartObj=new Chart(ctx,{
+        type:'line',
+        data:{labels:medias.map((_,i)=>i+1), datasets:[{label:'X̄',data:medias,borderColor:'green',fill:false}]},
+        options:{plugins:{title:{display:true,text:'Gráfico de X̄'}}}
+    });
+}
+
+// Resultado e nota
+function mostrarNota(){
+    let passosOk=passosCorretos.filter(Boolean).length;
+    const nota=Math.round((passosOk/3)*100);
+    document.getElementById('feedbackFinal').innerHTML=`Passos corretos: ${passosOk}/3<br>Nota: ${nota}`;
+}
+
 // Gerar PDF
 function gerarPDF(){
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc=new jsPDF();
     const name=document.getElementById('studentName').value||'Aluno';
     let passosOk=passosCorretos.filter(Boolean).length;
     const nota=Math.round((passosOk/3)*100);
@@ -180,5 +231,3 @@ function gerarPDF(){
 
 </body>
 </html>
-
-
