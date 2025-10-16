@@ -65,6 +65,7 @@
     <p>X̄ (média das médias): <span id="xBarProf"></span></p>
     <p>Desvio padrão σ: <span id="sigmaProf"></span></p>
     <button onclick="gerarPDF()">Gerar Relatório PDF</button>
+    <button onclick="preencherTabelaProfessor()">Preencher Tabela com X̄ e R</button>
   </div>
 </div>
 
@@ -76,34 +77,31 @@
 </div>
 
 <script>
-// Tabelas de constantes
 const d2_table = {2:1.128,3:1.693,4:2.059,5:2.326,6:2.534,7:2.704,8:2.847,9:2.970,10:3.078,11:3.173,12:3.258,13:3.336,14:3.407,15:3.472};
-
-let sampleValues = [], sampleMedia = [], sampleR = [];
+let sampleValues=[], sampleMedia=[], sampleR=[];
 let n=0, k=0;
-let passosCorretos = [false,false]; // Passos: Medias/R e Cp/Cpk
+let passosCorretos=[false,false];
 let rBarGlobal=0, xBarGlobal=0, sigmaGlobal=0;
 
 // Gerar tabela de entrada
 function gerarTabela(){
-    n = parseInt(document.getElementById('sampleSize').value);
-    k = parseInt(document.getElementById('numSamples').value);
+    n=parseInt(document.getElementById('sampleSize').value);
+    k=parseInt(document.getElementById('numSamples').value);
     if(isNaN(n) || isNaN(k) || n<2 || n>15 || k<1){ alert("Digite valores válidos!"); return; }
 
-    const table = document.getElementById('sampleTable');
+    const table=document.getElementById('sampleTable');
     table.innerHTML="";
-    // Cabeçalho
     let thead="<tr><th>Amostra</th>";
-    for(let j=1;j<=n;j++) thead += `<th>X${j}</th>`;
-    thead += "<th>X̄</th><th>R</th></tr>";
-    table.innerHTML += thead;
-    // Linhas
+    for(let j=1;j<=n;j++) thead+=`<th>X${j}</th>`;
+    thead+="<th>X̄</th><th>R</th></tr>";
+    table.innerHTML+=thead;
+
     for(let i=1;i<=k;i++){
         let row=`<tr><td>${i}</td>`;
-        for(let j=1;j<=n;j++) row += `<td><input type="number" step="0.001" id="cell_${i}_${j}"></td>`;
-        row += `<td><input type="number" step="0.001" id="media_${i}"></td>`;
-        row += `<td><input type="number" step="0.001" id="r_${i}"></td></tr>`;
-        table.innerHTML += row;
+        for(let j=1;j<=n;j++) row+=`<td><input type="number" step="0.001" id="cell_${i}_${j}"></td>`;
+        row+=`<td><input type="number" step="0.001" id="media_${i}"></td>`;
+        row+=`<td><input type="number" step="0.001" id="r_${i}"></td></tr>`;
+        table.innerHTML+=row;
     }
     document.getElementById('tableContainer').style.display='block';
 }
@@ -115,113 +113,114 @@ function verificarMediasER(){
     sampleValues=[]; sampleMedia=[]; sampleR=[];
     for(let i=1;i<=k;i++){
         let valores=[];
-        for(let j=1;j<=n;j++){
-            valores.push(parseFloat(document.getElementById(`cell_${i}_${j}`).value)||0);
-        }
-        const mediaCorreta = valores.reduce((a,b)=>a+b,0)/n;
-        const amplitudeCorreta = Math.max(...valores)-Math.min(...valores);
-        const mediaAluno = parseFloat(document.getElementById(`media_${i}`).value)||0;
-        const rAluno = parseFloat(document.getElementById(`r_${i}`).value)||0;
+        for(let j=1;j<=n;j++) valores.push(parseFloat(document.getElementById(`cell_${i}_${j}`).value)||0);
+        const mediaCorreta=valores.reduce((a,b)=>a+b,0)/n;
+        const amplitudeCorreta=Math.max(...valores)-Math.min(...valores);
+        const mediaAluno=parseFloat(document.getElementById(`media_${i}`).value)||0;
+        const rAluno=parseFloat(document.getElementById(`r_${i}`).value)||0;
 
         sampleValues.push(valores);
         sampleMedia.push(mediaCorreta);
         sampleR.push(amplitudeCorreta);
 
-        if(Math.abs(mediaAluno - mediaCorreta) > 0.001 || Math.abs(rAluno - amplitudeCorreta) > 0.001){
-            feedback += `❌ Amostra ${i}: Média ou R incorreto(a)<br>`;
+        if(Math.abs(mediaAluno-mediaCorreta)>0.001 || Math.abs(rAluno-amplitudeCorreta)>0.001){
+            feedback+=`❌ Amostra ${i}: Média ou R incorreto(a)<br>`;
             todosCorretos=false;
-        } else feedback += `✔️ Amostra ${i}: Correto<br>`;
+        } else feedback+=`✔️ Amostra ${i}: Correto<br>`;
     }
     document.getElementById('feedbackMedias').innerHTML=feedback;
+
     if(todosCorretos){
         document.getElementById('capabilityStep').style.display='block';
-        // Calcular globais (para módulo professor)
-        xBarGlobal = sampleMedia.reduce((a,b)=>a+b,0)/k;
-        rBarGlobal = sampleR.reduce((a,b)=>a+b,0)/k;
-        sigmaGlobal = rBarGlobal/d2_table[n];
-        document.getElementById('xBarGlobal').value = xBarGlobal.toFixed(3);
-        document.getElementById('sigmaGlobal').value = sigmaGlobal.toFixed(3);
+        xBarGlobal=sampleMedia.reduce((a,b)=>a+b,0)/k;
+        rBarGlobal=sampleR.reduce((a,b)=>a+b,0)/k;
+        sigmaGlobal=rBarGlobal/d2_table[n];
+        document.getElementById('xBarGlobal').value=xBarGlobal.toFixed(3);
+        document.getElementById('sigmaGlobal').value=sigmaGlobal.toFixed(3);
     }
 }
 
 // Verificar Cp e Cpk
 function verificarCpCpk(){
-    const lsl = parseFloat(document.getElementById('lsl').value);
-    const usl = parseFloat(document.getElementById('usl').value);
-    const cpAluno = parseFloat(document.getElementById('cpAluno').value);
-    const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
+    const lsl=parseFloat(document.getElementById('lsl').value);
+    const usl=parseFloat(document.getElementById('usl').value);
+    const cpAluno=parseFloat(document.getElementById('cpAluno').value);
+    const cpkAluno=parseFloat(document.getElementById('cpkAluno').value);
+    if(isNaN(lsl)||isNaN(usl)||isNaN(cpAluno)||isNaN(cpkAluno)){ alert("Preencha todos os campos!"); return; }
 
-    if(isNaN(lsl) || isNaN(usl) || isNaN(cpAluno) || isNaN(cpkAluno)){
-        alert("Preencha todos os campos!");
-        return;
-    }
-
-    const cpCorreto = (usl-lsl)/(6*sigmaGlobal);
-    const cpkCorreto = Math.min((usl - xBarGlobal)/(3*sigmaGlobal),(xBarGlobal - lsl)/(3*sigmaGlobal));
-    const tol = 0.01;
+    const cpCorreto=(usl-lsl)/(6*sigmaGlobal);
+    const cpkCorreto=Math.min((usl-xBarGlobal)/(3*sigmaGlobal),(xBarGlobal-lsl)/(3*sigmaGlobal));
+    const tol=0.01;
     let feedback="";
     if(Math.abs(cpAluno-cpCorreto)<=tol && Math.abs(cpkAluno-cpkCorreto)<=tol){
         feedback="✔️ Cp e Cpk corretos!";
         passosCorretos[1]=true;
     } else {
-        feedback=`❌ Cp ou Cpk incorreto(s)`;
+        feedback="❌ Cp ou Cpk incorreto(s)";
         passosCorretos[1]=false;
     }
     document.getElementById('feedbackCpCpk').innerHTML=feedback;
 }
 
-// Mostrar resultado final
+// Resultado final
 function mostrarNota(){
     const name=document.getElementById('studentName').value||'Aluno';
-    const certos = passosCorretos.filter(Boolean).length;
-    const nota = Math.round((certos/2)*100*100)/100;
+    const certos=passosCorretos.filter(Boolean).length;
+    const nota=Math.round((certos/2)*100*100)/100;
     document.getElementById('feedbackFinal').innerHTML=`${name} — Passos corretos: ${certos}/2. Desempenho: ${nota.toFixed(2)}%`;
 }
 
 // Módulo professor
 function ativarProfessor(){
-    const senha = document.getElementById('profPassword').value;
+    const senha=document.getElementById('profPassword').value;
     if(senha==="2806ANdr*"){
         document.getElementById('profFeedback').innerHTML="✅ Módulo professor ativado";
         document.getElementById('profValues').style.display='block';
-        document.getElementById('rBarProf').textContent = rBarGlobal.toFixed(3);
-        document.getElementById('xBarProf').textContent = xBarGlobal.toFixed(3);
-        document.getElementById('sigmaProf').textContent = sigmaGlobal.toFixed(3);
+        document.getElementById('rBarProf').textContent=rBarGlobal.toFixed(3);
+        document.getElementById('xBarProf').textContent=xBarGlobal.toFixed(3);
+        document.getElementById('sigmaProf').textContent=sigmaGlobal.toFixed(3);
     } else {
         document.getElementById('profFeedback').innerHTML="❌ Senha incorreta";
     }
 }
 
-// Gerar PDF com relatório
+// Preencher tabela com X̄ e R corretos
+function preencherTabelaProfessor(){
+    for(let i=1;i<=k;i++){
+        document.getElementById(`media_${i}`).value=sampleMedia[i-1].toFixed(3);
+        document.getElementById(`r_${i}`).value=sampleR[i-1].toFixed(3);
+    }
+}
+
+// Gerar PDF
 function gerarPDF(){
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const name = document.getElementById('studentName').value||'Aluno';
+    const doc=new jsPDF();
+    const name=document.getElementById('studentName').value||'Aluno';
     doc.setFontSize(16);
-    doc.text(`Relatório de Desempenho - ${name}`, 10, 20);
+    doc.text(`Relatório de Desempenho - ${name}`,10,20);
     doc.setFontSize(12);
-    doc.text(`R̄ (média das amplitudes): ${rBarGlobal.toFixed(3)}`, 10, 30);
-    doc.text(`X̄ (média das médias): ${xBarGlobal.toFixed(3)}`, 10, 40);
-    doc.text(`σ do processo: ${sigmaGlobal.toFixed(3)}`, 10, 50);
-    doc.text(`Amostras:`, 10, 60);
+    doc.text(`R̄: ${rBarGlobal.toFixed(3)}`,10,30);
+    doc.text(`X̄: ${xBarGlobal.toFixed(3)}`,10,40);
+    doc.text(`σ: ${sigmaGlobal.toFixed(3)}`,10,50);
+    doc.text(`Amostras:`,10,60);
     let y=70;
     for(let i=0;i<k;i++){
-        doc.text(`Amostra ${i+1}: Valores = [${sampleValues[i].join(', ')}], X̄ = ${sampleMedia[i].toFixed(3)}, R = ${sampleR[i].toFixed(3)}`, 10, y);
+        doc.text(`Amostra ${i+1}: [${sampleValues[i].join(', ')}], X̄=${sampleMedia[i].toFixed(3)}, R=${sampleR[i].toFixed(3)}`,10,y);
         y+=10;
-        if(y>280){ doc.addPage(); y=20; }
+        if(y>280){doc.addPage(); y=20;}
     }
-    const lsl = parseFloat(document.getElementById('lsl').value);
-    const usl = parseFloat(document.getElementById('usl').value);
-    const cpAluno = parseFloat(document.getElementById('cpAluno').value);
-    const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
-    doc.text(`Limites de especificação: LSL=${lsl}, USL=${usl}`, 10, y); y+=10;
-    doc.text(`Cp = ${cpAluno}, Cpk = ${cpkAluno}`, 10, y); y+=10;
-    const certos = passosCorretos.filter(Boolean).length;
-    const nota = Math.round((certos/2)*100*100)/100;
-    doc.text(`Passos corretos: ${certos}/2. Desempenho: ${nota.toFixed(2)}%`, 10, y+10);
+    const lsl=parseFloat(document.getElementById('lsl').value);
+    const usl=parseFloat(document.getElementById('usl').value);
+    const cpAluno=parseFloat(document.getElementById('cpAluno').value);
+    const cpkAluno=parseFloat(document.getElementById('cpkAluno').value);
+    doc.text(`LSL=${lsl}, USL=${usl}`,10,y); y+=10;
+    doc.text(`Cp=${cpAluno}, Cpk=${cpkAluno}`,10,y); y+=10;
+    const certos=passosCorretos.filter(Boolean).length;
+    const nota=Math.round((certos/2)*100*100)/100;
+    doc.text(`Passos corretos: ${certos}/2. Desempenho: ${nota.toFixed(2)}%`,10,y+10);
     doc.save(`Relatorio_${name}.pdf`);
 }
 </script>
-
 </body>
 </html>
