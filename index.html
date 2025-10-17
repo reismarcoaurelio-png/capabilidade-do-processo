@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Capabilidade do Processo — Aluno & Professor</title>
 <style>
-  body{font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:20px;color:#222}
-  h1{text-align:center}
-  .step{background:#fff;padding:14px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin:12px 0}
+  body{font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:18px;color:#222}
+  h1{text-align:center;margin-bottom:8px}
+  .step{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin:12px 0}
   label{display:inline-block;margin:6px 8px 6px 0}
   input[type="number"],input[type="text"],input[type="password"]{padding:6px;border:1px solid #ccc;border-radius:4px;width:160px}
   input[type="number"].wide{width:260px}
@@ -20,17 +20,18 @@
   .feedback{margin-top:8px;font-weight:600;white-space:pre-wrap}
   .small{font-size:13px;color:#555}
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .controls{margin-top:8px}
 </style>
 
-<!-- jsPDF -->
+<!-- jsPDF (CDN) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <h1>Monitoramento Passo a Passo — Capabilidade do Processo</h1>
 
-<!-- Dados do aluno -->
+<!-- Aluno: dados iniciais -->
 <div class="step" id="step0">
-  <h3>Dados do Estudante</h3>
+  <h3>Dados do Estudante (Aluno)</h3>
   <div class="row">
     <label>Nome: <input type="text" id="studentName" placeholder="Seu nome"></label>
     <label>Tamanho da amostra (n): <input type="number" id="sampleSize" min="2" max="15"></label>
@@ -38,42 +39,40 @@
     <button onclick="gerarTabela()">Gerar tabela</button>
     <button onclick="preencherExemplo()" class="secondary">Preencher exemplo</button>
   </div>
-  <div class="small">Observação: n entre 2 e 15</div>
+  <div class="small">Observação: defina n entre 2 e 15. Tolerância de verificação: ±0,1.</div>
 </div>
 
-<!-- Passo 1 -->
+<!-- Tabela entrada (aluno) -->
 <div class="step" id="step1" style="display:none">
   <h3>1) Preencha as observações por amostra, X̄ (por amostra) e R (por amostra)</h3>
   <div id="tableContainer"><table id="sampleTable"></table></div>
-  <div style="margin-top:8px">
+  <div class="controls">
     <button onclick="verificarMediasER()">Verificar Médias e R (aluno)</button>
-    <button onclick="gerarPDFAluno()" class="secondary">Aluno: Gerar PDF</button>
+    <button onclick="gerarPDFAluno()" class="secondary">Gerar PDF (aluno)</button>
   </div>
   <div id="feedbackMedias" class="feedback"></div>
 </div>
 
-<!-- Passo 2 -->
+<!-- Aluno: Xbar global, Rbar, sigma via d2 -->
 <div class="step" id="step2" style="display:none">
   <h3>2) Calcule X̄ global, R̄ e σ (pelo aluno)</h3>
-  <div class="small">Depois de preencher X̄ e R por amostra, calcule:</div>
+  <div class="small">Após verificar médias por amostra, preencha e solicite verificação.</div>
   <div class="row">
     <label>X̄ global: <input type="number" id="xbarGlobalAluno" step="0.001"></label>
     <label>R̄: <input type="number" id="rbarAluno" step="0.001"></label>
     <label>σ (via R̄/d₂): <input type="number" id="sigmaAluno" step="0.001"></label>
   </div>
-  <div style="margin-top:8px">
-    <button onclick="verificarGlobalsAluno()">Verificar X̄ global, R̄ e σ</button>
-  </div>
+  <div class="controls"><button onclick="verificarGlobalsAluno()">Verificar X̄ global, R̄ e σ</button></div>
   <div id="feedbackGlobals" class="feedback"></div>
 </div>
 
-<!-- Passo 3 -->
+<!-- Aluno: Cp / Cpk -->
 <div class="step" id="step3" style="display:none">
-  <h3>3) Limites e Cp / Cpk (aluno)</h3>
-  <div class="small">Com X̄ global e σ verificados, informe limites e calcule Cp e Cpk manualmente:</div>
+  <h3>3) Limites e Cp / Cpk (aluno calcula manualmente)</h3>
+  <div class="small">Informe limites e calcule Cp e Cpk manualmente. O sistema apenas verifica.</div>
   <div class="row">
-    <label>LSL: <input type="number" id="lsl" step="0.001"></label>
-    <label>USL: <input type="number" id="usl" step="0.001"></label>
+    <label>(Limite Inferior de Especificação) LIE: <input type="number" id="lsl" step="0.001"></label>
+    <label>(Limite Superior de Especificação) LSE: <input type="number" id="usl" step="0.001"></label>
   </div>
   <div class="row" style="margin-top:8px">
     <label>Cp (aluno): <input type="number" id="cpAluno" step="0.001"></label>
@@ -83,21 +82,21 @@
   <div id="feedbackCpCpkAluno" class="feedback"></div>
 </div>
 
-<!-- Passo 4: sigma individual -->
+<!-- Aluno: s (desvio amostral com todas as observações) -->
 <div class="step" id="step4" style="display:none">
-  <h3>4) Desvio-padrão amostral (baseado em cada observação)</h3>
-  <div class="small">Calcule o desvio-padrão amostral s usando todas as observações (N = n × k). Use: s = √(Σ(x - x̄_global)² / (N - 1)).</div>
+  <h3>4) Desvio-padrão amostral (s) — usando todas as observações</h3>
+  <div class="small">s = √(Σ(x - x̄_global_all)² / (N - 1)), onde N = n × k.</div>
   <div class="row" style="margin-top:8px">
-    <label>σ (aluno): <input type="number" id="sAluno" step="0.001" class="wide"></label>
+    <label>s (aluno): <input type="number" id="sAluno" step="0.001" class="wide"></label>
     <button onclick="verificarSAluno()">Verificar s</button>
   </div>
   <div id="feedbackS" class="feedback"></div>
 </div>
 
-<!-- Passo 5: Pp / Ppk -->
+<!-- Aluno: Pp / Ppk -->
 <div class="step" id="step5" style="display:none">
   <h3>5) Pp e Ppk (aluno)</h3>
-  <div class="small">Com s verificado, calcule:</div>
+  <div class="small">Com s verificado, calcule Pp e Ppk manualmente e peça verificação.</div>
   <div class="row" style="margin-top:8px">
     <label>Pp (aluno): <input type="number" id="ppAluno" step="0.001" class="wide"></label>
     <label>Ppk (aluno): <input type="number" id="ppkAluno" step="0.001" class="wide"></label>
@@ -106,21 +105,21 @@
   <div id="feedbackPpPpk" class="feedback"></div>
 </div>
 
-<!-- Módulo professor -->
+<!-- Módulo Professor -->
 <div class="step" id="stepProfessor">
   <h3>Módulo Professor (protegido)</h3>
   <div class="row">
-    <label>Senha: <input type="password" id="profPass"></label>
+    <label>Senha: <input type="password" id="profPass" placeholder="senha"></label>
     <button onclick="ativarProfessor()">Ativar Professor</button>
     <button id="showProfValuesBtn" onclick="mostrarValoresProfessor()" style="display:none" class="secondary">Mostrar valores do professor</button>
     <button id="fillByProfBtn" onclick="preencherTabelaProfessor()" style="display:none" class="secondary">Preencher X̄ e R (professor)</button>
     <button id="genPdfProfBtn" onclick="gerarPDFProfessor()" style="display:none" class="secondary">Gerar PDF (professor)</button>
   </div>
   <div id="feedbackProfessor" class="feedback"></div>
-  <div class="small">Professor: ao ativar, sistema calcula os valores corretos e permite preencher a tabela e gerar PDF com os valores corretos.</div>
+  <div class="small">Professor: ao ativar, o sistema tenta ler a tabela de observações, calcula valores corretos e permite preencher/gerar relatório.</div>
 </div>
 
-<!-- Resultado / nota -->
+<!-- Resultado / Nota -->
 <div class="step" id="stepNota">
   <h3>Resultado / Nota</h3>
   <div class="row">
@@ -128,23 +127,23 @@
     <button onclick="gerarPDFAluno()" class="secondary">Gerar relatório do aluno (PDF)</button>
   </div>
   <div id="feedbackFinal" class="feedback"></div>
-  <div class="small">Nota ponderada (0–100): amostras 35%, X̄/R/σ 20%, Cp/Cpk 15%, s 15%, Pp/Ppk 15%.</div>
+  <div class="small">Pesos: amostras 35%, X̄/R/σ 20%, Cp/Cpk 15%, s 15%, Pp/Ppk 15% (total 100).</div>
 </div>
 
 <script>
-/* ---------- Configurações ---------- */
+/* ---------- Configurações e constantes ---------- */
 const d2_table = {2:1.128,3:1.693,4:2.059,5:2.326,6:2.534,7:2.704,8:2.847,9:2.97,10:3.078,11:3.173,12:3.258,13:3.336,14:3.407,15:3.472};
 const TOL = 0.1; // tolerância ±0,1
+const PROFESSOR_PASS = '2806ANdr*';
+
 let n = 0, k = 0;
 let XarrAll = []; // matriz [amostra][valor]
-let xbars = [];   // médias calculadas (pelo professor/resultado)
-let Rs = [];      // amplitudes calculadas
-let professorData = null;
+let xbars = [];   // valores corretos X̄ por amostra (calculados)
+let Rs = [];      // valores corretos R por amostra (calculados)
 let professorActive = false;
+let professorData = null;
 
-/* ---------- Funções ---------- */
-
-// Gera tabela de entrada (aluno)
+/* ---------- Funções: geração/controle da tabela ---------- */
 function gerarTabela(){
   const student = document.getElementById('studentName').value.trim();
   n = parseInt(document.getElementById('sampleSize').value);
@@ -152,24 +151,24 @@ function gerarTabela(){
   if(!student){ alert('Digite o nome do estudante.'); return; }
   if(isNaN(n) || n<2 || n>15 || isNaN(k) || k<1){ alert('Informe n (2–15) e k (>=1).'); return; }
 
-  // limpa arrays
-  XarrAll = []; xbars = []; Rs = []; professorData = null;
-  // montar tabela
+  XarrAll = []; xbars = []; Rs = []; professorData = null; professorActive = false;
+  document.getElementById('feedbackProfessor').innerText = '';
+
   let html = '<tr><th>Amostra</th>';
-  for(let j=1;j<=n;j++) html += `<th>X${j}</th>`;
+  for(let j=0;j<n;j++) html += `<th>X${j+1}</th>`;
   html += '<th>X̄ (aluno)</th><th>R (aluno)</th></tr>';
 
   for(let i=0;i<k;i++){
     html += `<tr><td>${i+1}</td>`;
-    for(let j=0;j<n;j++) html += `<td><input type="number" id="cell_${i}_${j}" step="0.001"></td>`;
+    for(let j=0;j<n;j++){
+      html += `<td><input type="number" id="cell_${i}_${j}" step="0.001"></td>`;
+    }
     html += `<td><input type="number" id="media_${i}" step="0.001"></td>`;
     html += `<td><input type="number" id="r_${i}" step="0.001"></td></tr>`;
   }
-
   document.getElementById('sampleTable').innerHTML = html;
   document.getElementById('step1').style.display = 'block';
-
-  // reset subsequent sections and feedbacks
+  // hide later steps until student advances
   document.getElementById('step2').style.display = 'none';
   document.getElementById('step3').style.display = 'none';
   document.getElementById('step4').style.display = 'none';
@@ -181,76 +180,72 @@ function gerarTabela(){
   document.getElementById('feedbackPpPpk').innerText = '';
 }
 
-// Preencher tabela de exemplo (útil para testes rápidos)
+/* Preencher exemplo rápido */
 function preencherExemplo(){
-  // Só funciona se tabela gerada
   if(!k || !n){ alert('Gere a tabela primeiro.'); return; }
-  // Exemplo simples: k amostras com pequenas variações
   for(let i=0;i<k;i++){
     for(let j=0;j<n;j++){
-      const val = 10 + i*0.1 + j*0.05; // valores variados
+      const val = 1000 + (i*0.5) + (j-2)*(0.4); // variação
       document.getElementById(`cell_${i}_${j}`).value = val.toFixed(3);
     }
-    // deixar X̄ e R em branco para o aluno preencher ou professor preencher
     document.getElementById(`media_${i}`).value = '';
     document.getElementById(`r_${i}`).value = '';
   }
-  alert('Tabela de exemplo preenchida. Agora o aluno pode preencher X̄ e R (ou professor pode preencher automaticamente).');
+  alert('Exemplo preenchido. Agora preencha X̄ e R (ou ative professor para preencher).');
 }
 
-/* ---------- Passo 1: verificar médias e R preenchidos pelo aluno ---------- */
+/* ---------- Passo 1: Verificar médias e R (Aluno) ---------- */
 function verificarMediasER(){
   if(!k || !n){ alert('Gere a tabela primeiro.'); return; }
-  let feedbackLines = [];
-  let allOk = true;
   XarrAll = []; xbars = []; Rs = [];
+
+  let feedbackLines = [];
+  let allFilled = true;
 
   for(let i=0;i<k;i++){
     let arr = [];
     let min = Number.POSITIVE_INFINITY, max = Number.NEGATIVE_INFINITY;
     for(let j=0;j<n;j++){
-      const valRaw = document.getElementById(`cell_${i}_${j}`).value;
-      const val = parseFloat(valRaw);
-      if(isNaN(val)){ allOk = false; feedbackLines = ['Preencha todos os valores das observações!']; break; }
-      arr.push(val);
-      if(val < min) min = val;
-      if(val > max) max = val;
+      const raw = document.getElementById(`cell_${i}_${j}`).value;
+      const v = parseFloat(raw);
+      if(isNaN(v)){ allFilled = false; break; }
+      arr.push(v);
+      if(v < min) min = v;
+      if(v > max) max = v;
     }
-    if(!allOk) break;
-
+    if(!allFilled){ break; }
+    XarrAll.push(arr);
     const calcXbar = arr.reduce((a,b)=>a+b,0)/n;
     const calcR = max - min;
     xbars.push(calcXbar);
     Rs.push(calcR);
-    XarrAll.push(arr);
 
-    const alunoXbar = parseFloat(document.getElementById(`media_${i}`).value) || 0;
-    const alunoR = parseFloat(document.getElementById(`r_${i}`).value) || 0;
+    const alunoX = parseFloat(document.getElementById(`media_${i}`).value) || NaN;
+    const alunoR = parseFloat(document.getElementById(`r_${i}`).value) || NaN;
 
-    const xbarOk = Math.abs(alunoXbar - calcXbar) <= TOL;
-    const rOk = Math.abs(alunoR - calcR) <= TOL;
+    const xOk = !isNaN(alunoX) && Math.abs(alunoX - calcXbar) <= TOL;
+    const rOk = !isNaN(alunoR) && Math.abs(alunoR - calcR) <= TOL;
 
-    feedbackLines.push(`Amostra ${i+1}: X̄ ${xbarOk ? 'correto' : `incorreto (esperado ${calcXbar.toFixed(3)})`}, R ${rOk ? 'correto' : `incorreto (esperado ${calcR.toFixed(3)})`}`);
+    feedbackLines.push(`Amostra ${i+1}: X̄ ${xOk ? 'correto' : `incorreto `}, R ${rOk ? 'correto' : `incorreto;
+  }
+
+  if(!allFilled){
+    document.getElementById('feedbackMedias').innerText = 'Preencha todos os valores das observações antes de verificar.';
+    return;
   }
 
   document.getElementById('feedbackMedias').innerText = feedbackLines.join('\n');
 
-  if(allOk) {
-    // mostrar próximo passo
-    document.getElementById('step2').style.display = 'block';
-  } else {
-    // se houve preenchimento parcial inválido, não desbloquear
-    // mas ainda exibir o que foi verificado
-  }
+  // desbloqueia próxima etapa mesmo se houver erros, para permitir correção - porém o aluno só avança se quiser
+  document.getElementById('step2').style.display = 'block';
 }
 
-/* ---------- Passo 2: verificar X̄ global, R̄ e sigma (aluno) ---------- */
+/* ---------- Passo 2: Verificar X̄ global, R̄ e sigma via d2 (Aluno) ---------- */
 function verificarGlobalsAluno(){
   if(xbars.length !== k || Rs.length !== k){ alert('Verifique as médias e R por amostra primeiro.'); return; }
-
-  const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value) || 0;
-  const rbarAluno = parseFloat(document.getElementById('rbarAluno').value) || 0;
-  const sigmaAluno = parseFloat(document.getElementById('sigmaAluno').value) || 0;
+  const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value);
+  const rbarAluno = parseFloat(document.getElementById('rbarAluno').value);
+  const sigmaAluno = parseFloat(document.getElementById('sigmaAluno').value);
 
   const xbarGlobalCalc = xbars.reduce((a,b)=>a+b,0)/k;
   const rbarCalc = Rs.reduce((a,b)=>a+b,0)/k;
@@ -258,29 +253,24 @@ function verificarGlobalsAluno(){
   const sigmaCalc = rbarCalc / d2;
 
   let fb = [];
-  fb.push(`X̄ global: ${Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL ? 'correto' : `incorreto (esperado ${xbarGlobalCalc.toFixed(4)})`}`);
-  fb.push(`R̄: ${Math.abs(rbarAluno - rbarCalc) <= TOL ? 'correto' : `incorreto (esperado ${rbarCalc.toFixed(4)})`}`);
-  fb.push(`σ (via R̄/d2): ${Math.abs(sigmaAluno - sigmaCalc) <= TOL ? 'correto' : `incorreto (esperado ${sigmaCalc.toFixed(4)})`}`);
+  fb.push(`X̄ global: ${(!isNaN(xbarGlobalAluno) && Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL) ? 'correto' : `incorreto ;
+  fb.push(`R̄: ${(!isNaN(rbarAluno) && Math.abs(rbarAluno - rbarCalc) <= TOL) ? 'correto' : `incorreto ;
+  fb.push(`σ (via R̄/d₂): ${(!isNaN(sigmaAluno) && Math.abs(sigmaAluno - sigmaCalc) <= TOL) ? 'correto' : `incorreto ;
 
   document.getElementById('feedbackGlobals').innerText = fb.join('\n');
 
-  // liberar próximos passos se OK
-  if(Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL && Math.abs(rbarAluno - rbarCalc) <= TOL && Math.abs(sigmaAluno - sigmaCalc) <= TOL){
-    document.getElementById('step3').style.display = 'block';
-    document.getElementById('step4').style.display = 'block';
-    // Step 5 (Pp/Ppk) will be shown after s verificado
-  } else {
-    // não desbloqueia Cp/Cpk/pp automaticamente
-  }
+  // desbloqueia Cp/Cpk e s
+  document.getElementById('step3').style.display = 'block';
+  document.getElementById('step4').style.display = 'block';
 }
 
-/* ---------- Passo 3: Cp e Cpk (aluno) ---------- */
+/* ---------- Passo 3: Verificar Cp / Cpk (Aluno) ---------- */
 function verificarCpCpkAluno(){
+  if(xbars.length !== k || Rs.length !== k){ alert('Verifique as médias por amostra primeiro.'); return; }
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
   if(isNaN(lsl) || isNaN(usl)){ alert('Informe LSL e USL.'); return; }
 
-  // usar xbarGlobal e sigma calculados a partir de xbars/Rs (valores corretos)
   const xbarGlobalCalc = xbars.reduce((a,b)=>a+b,0)/k;
   const rbarCalc = Rs.reduce((a,b)=>a+b,0)/k;
   const d2 = d2_table[n] || d2_table[10];
@@ -289,129 +279,128 @@ function verificarCpCpkAluno(){
   const cpCalc = (usl - lsl) / (6 * sigmaCalc);
   const cpkCalc = Math.min((usl - xbarGlobalCalc) / (3 * sigmaCalc), (xbarGlobalCalc - lsl) / (3 * sigmaCalc));
 
-  const cpAluno = parseFloat(document.getElementById('cpAluno').value) || 0;
-  const cpkAluno = parseFloat(document.getElementById('cpkAluno').value) || 0;
+  const cpAluno = parseFloat(document.getElementById('cpAluno').value);
+  const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
 
   let fb = [];
-  fb.push(`Cp: ${Math.abs(cpAluno - cpCalc) <= TOL ? 'correto' : `incorreto (esperado ${cpCalc.toFixed(4)})`}`);
-  fb.push(`Cpk: ${Math.abs(cpkAluno - cpkCalc) <= TOL ? 'correto' : `incorreto (esperado ${cpkCalc.toFixed(4)})`}`);
+  fb.push(`Cp: ${(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) ? 'correto' : `incorreto ;
+  fb.push(`Cpk: ${(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) ? 'correto' : `incorreto ;
 
   document.getElementById('feedbackCpCpkAluno').innerText = fb.join('\n');
-  // note: not blocking next steps here — s and Pp depend on student's action
 }
 
-/* ---------- Passo 4: s (desvio amostral com todas as observações) ---------- */
+/* ---------- Passo 4: s (desvio amostral global) ---------- */
 function verificarSAluno(){
-  if(XarrAll.length !== k){ alert('Verifique as médias e R por amostra primeiro.'); return; }
-  // calcular s correto
+  if(XarrAll.length !== k || xbars.length !== k){ alert('Verifique as médias por amostra primeiro.'); return; }
+  // concatenar todos os valores (somente valores, sem X̄ e R)
   const todas = [].concat(...XarrAll);
+  if(todas.length < 2){ alert('Dados insuficientes.'); return; }
   const N = todas.length;
-  const xbarGlobalCalc = todas.reduce((a,b)=>a+b,0)/N;
+  const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
   let soma = 0;
-  for(const v of todas) soma += Math.pow(v - xbarGlobalCalc, 2);
+  for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
   const sCalc = Math.sqrt(soma / (N - 1));
 
-  const sAluno = parseFloat(document.getElementById('sAluno').value) || 0;
-  let fb = `s: ${Math.abs(sAluno - sCalc) <= TOL ? 'correto' : `incorreto (esperado ${sCalc.toFixed(4)})`}`;
+  const sAluno = parseFloat(document.getElementById('sAluno').value);
+  const fb = `s: ${(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) ? 'correto' : `incorreto ;
   document.getElementById('feedbackS').innerText = fb;
 
-  if(Math.abs(sAluno - sCalc) <= TOL){
-    // liberar passo Pp/Ppk
+  if(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL){
     document.getElementById('step5').style.display = 'block';
-    // store in professorData if active
-    if(!professorData) professorData = {};
-    professorData.s = sCalc;
   }
 }
 
-/* ---------- Passo 5: Pp / Ppk (aluno) ---------- */
+/* ---------- Passo 5: Pp / Ppk (Aluno) ---------- */
 function verificarPpPpkAluno(){
+  if(XarrAll.length !== k){ alert('Verifique as amostras primeiro.'); return; }
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
-  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LSL e USL (passo 3).'); return; }
+  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LSL e USL.'); return; }
 
-  // calcular s correto (com todas as observações)
   const todas = [].concat(...XarrAll);
   const N = todas.length;
-  const xbarGlobalCalc = todas.reduce((a,b)=>a+b,0)/N;
+  const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
   let soma = 0;
-  for(const v of todas) soma += Math.pow(v - xbarGlobalCalc, 2);
+  for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
   const sCalc = Math.sqrt(soma / (N - 1));
 
   const ppCalc = (usl - lsl) / (6 * sCalc);
-  const ppkCalc = Math.min((usl - xbarGlobalCalc) / (3 * sCalc), (xbarGlobalCalc - lsl) / (3 * sCalc));
+  const ppkCalc = Math.min((usl - mediaGlobal) / (3 * sCalc), (mediaGlobal - lsl) / (3 * sCalc));
 
-  const ppAluno = parseFloat(document.getElementById('ppAluno').value) || 0;
-  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value) || 0;
+  const ppAluno = parseFloat(document.getElementById('ppAluno').value);
+  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
 
   let fb = [];
-  fb.push(`Pp: ${Math.abs(ppAluno - ppCalc) <= TOL ? 'correto' : `incorreto (esperado ${ppCalc.toFixed(4)})`}`);
-  fb.push(`Ppk: ${Math.abs(ppkAluno - ppkCalc) <= TOL ? 'correto' : `incorreto (esperado ${ppkCalc.toFixed(4)})`}`);
+  fb.push(`Pp: ${(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) ? 'correto' : `incorreto ;
+  fb.push(`Ppk: ${(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) ? 'correto' : `incorreto ;
 
   document.getElementById('feedbackPpPpk').innerText = fb.join('\n');
-
-  if(!professorData) professorData = {};
-  professorData.pp = ppCalc;
-  professorData.ppk = ppkCalc;
-  professorData.s = sCalc;
 }
 
-/* ---------- Professor: ativar, mostrar valores, preencher, PDF ---------- */
+/* ---------- Professor: ativar, calcular e preencher ---------- */
 function ativarProfessor(){
   const pass = document.getElementById('profPass').value || '';
-  if(pass !== '2806ANdr*'){ document.getElementById('feedbackProfessor').innerText = 'Senha incorreta.'; professorActive = false; return; }
-  professorActive = true;
-  // calcular automaticamente (se já houver XarrAll em memória, caso contrário precisa que aluno tenha preenchido observações)
-  // attempt to build XarrAll if empty but table has values
-  if(XarrAll.length === 0 && k && n){
-    // try to read table values (even if XarrAll not set because aluno didn't 'verificar')
-    let ok = true;
-    let tmp = [];
-    for(let i=0;i<k;i++){
-      let arr = [];
-      for(let j=0;j<n;j++){
-        const v = parseFloat(document.getElementById(`cell_${i}_${j}`).value);
-        if(isNaN(v)){ ok = false; break; }
-        arr.push(v);
-      }
-      if(!ok) break;
-      tmp.push(arr);
-    }
-    if(ok) XarrAll = tmp;
+  if(pass !== PROFESSOR_PASS){
+    document.getElementById('feedbackProfessor').innerText = 'Senha incorreta.';
+    professorActive = false;
+    return;
   }
-  if(XarrAll.length !== k){ document.getElementById('feedbackProfessor').innerText = 'Professor ativado — mas a tabela de observações não está completa.'; }
-  else {
-    // compute professorData
+  // professor ativado
+  professorActive = true;
+  // tenta montar XarrAll lendo a tabela (caso aluno não tenha clicado em verificar)
+  let ok = true;
+  const tmp = [];
+  for(let i=0;i<k;i++){
+    const arr = [];
+    for(let j=0;j<n;j++){
+      const raw = document.getElementById(`cell_${i}_${j}`).value;
+      const v = parseFloat(raw);
+      if(isNaN(v)){ ok = false; break; }
+      arr.push(v);
+    }
+    if(!ok) break;
+    tmp.push(arr);
+  }
+  if(ok){
+    XarrAll = tmp;
+    // calcula dados e habilita botões
     computeProfessorData();
-    document.getElementById('feedbackProfessor').innerText = 'Professor ativado — valores calculados. Use "Mostrar valores do professor" para visualizar.';
-    // enable buttons
+    document.getElementById('feedbackProfessor').innerText = 'Professor ativado — valores calculados.';
     document.getElementById('showProfValuesBtn').style.display = 'inline-block';
     document.getElementById('fillByProfBtn').style.display = 'inline-block';
     document.getElementById('genPdfProfBtn').style.display = 'inline-block';
+  } else {
+    document.getElementById('feedbackProfessor').innerText = 'Professor ativado — tabela incompleta (preencha todas as observações).';
+    // permite professor tentar preencher later after student fills
+    document.getElementById('showProfValuesBtn').style.display = 'none';
+    document.getElementById('fillByProfBtn').style.display = 'none';
+    document.getElementById('genPdfProfBtn').style.display = 'none';
   }
 }
 
-// calcula e guarda professorData
 function computeProfessorData(){
-  if(XarrAll.length !== k) return;
-  const medias = [], rs = [];
+  if(!XarrAll || XarrAll.length !== k) return;
+  xbars = []; Rs = [];
   const todas = [];
   for(let i=0;i<k;i++){
     const arr = XarrAll[i];
     const mx = arr.reduce((a,b)=>a+b,0)/n;
     const r = Math.max(...arr) - Math.min(...arr);
-    medias.push(mx); rs.push(r);
+    xbars.push(mx);
+    Rs.push(r);
     for(const v of arr) todas.push(v);
   }
-  const xBarGlobal = medias.reduce((a,b)=>a+b,0)/k;
-  const rBarGlobal = rs.reduce((a,b)=>a+b,0)/k;
+  const xBarGlobal = xbars.reduce((a,b)=>a+b,0)/k;
+  const rBarGlobal = Rs.reduce((a,b)=>a+b,0)/k;
   const d2 = d2_table[n] || d2_table[10];
   const sigma_viaR = rBarGlobal / d2;
+
   // s (amostral) com N-1
   const N = todas.length;
   const mediaGlobalTodas = todas.reduce((a,b)=>a+b,0)/N;
   let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobalTodas, 2);
   const s = Math.sqrt(soma / (N - 1));
+
   // Cp/Cpk e Pp/Ppk se limites informados
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
@@ -422,26 +411,28 @@ function computeProfessorData(){
     pp = (usl - lsl) / (6 * s);
     ppk = Math.min((usl - mediaGlobalTodas) / (3 * s), (mediaGlobalTodas - lsl) / (3 * s));
   }
+
   professorData = {
-    medias, rs, xBarGlobal, rBarGlobal, sigma_viaR, s, cp, cpk, pp, ppk, todas, mediaGlobalTodas
+    medias: xbars.slice(),
+    rs: Rs.slice(),
+    xBarGlobal, rBarGlobal, sigma_viaR,
+    s, cp, cpk, pp, ppk,
+    todas, mediaGlobalTodas
   };
-  // also store xbars and Rs for consistent use
-  xbars = medias.slice();
-  Rs = rs.slice();
 }
 
-// mostra valores do professor na área de feedback do professor
+/* Mostrar valores calculados pelo professor */
 function mostrarValoresProfessor(){
-  if(!professorActive || !professorData){ alert('Ative o professor e calcule os valores primeiro.'); return; }
+  if(!professorActive || !professorData){ alert('Ative o professor e preencha a tabela com todas as observações antes.'); return; }
   const p = professorData;
-  let lines = [];
+  const lines = [];
   for(let i=0;i<k;i++){
     lines.push(`Amostra ${i+1}: X̄(prof)=${p.medias[i].toFixed(4)}, R(prof)=${p.rs[i].toFixed(4)}`);
   }
   lines.push(`X̄ global (prof): ${p.xBarGlobal.toFixed(4)}`);
   lines.push(`R̄ (prof): ${p.rBarGlobal.toFixed(4)}`);
-  lines.push(`σ (via R̄/d2) (prof): ${p.sigma_viaR.toFixed(4)}`);
-  lines.push(`s (desvio amostral) (prof): ${p.s.toFixed(4)}`);
+  lines.push(`σ via R̄/d₂ (prof): ${p.sigma_viaR.toFixed(4)}`);
+  lines.push(`s (desvio amostral, prof): ${p.s.toFixed(4)}`);
   if(p.cp !== null){
     lines.push(`Cp (prof): ${p.cp.toFixed(4)}   Cpk (prof): ${p.cpk.toFixed(4)}`);
     lines.push(`Pp (prof): ${p.pp.toFixed(4)}   Ppk (prof): ${p.ppk.toFixed(4)}`);
@@ -451,19 +442,21 @@ function mostrarValoresProfessor(){
   document.getElementById('feedbackProfessor').innerText = lines.join('\n');
 }
 
-// preencher tabela com valores do professor (sobrescreve colunas X̄ e R)
+/* Preencher a tabela (professor sobrescreve X̄ e R e preenche campos globais) */
 function preencherTabelaProfessor(){
-  if(!professorActive){ alert('Ative o módulo professor.'); return; }
-  if(!professorData){ computeProfessorData(); if(!professorData){ alert('Dados insuficientes.'); return; } }
+  if(!professorActive){ alert('Ative o módulo professor primeiro.'); return; }
+  if(!professorData) computeProfessorData();
+  if(!professorData){ alert('Dados insuficientes.'); return; }
+
   for(let i=0;i<k;i++){
     document.getElementById(`media_${i}`).value = professorData.medias[i].toFixed(3);
     document.getElementById(`r_${i}`).value = professorData.rs[i].toFixed(3);
   }
-  // preencher globais em campos do aluno para conferência
+  // preenche campos globais e sigma via R
   document.getElementById('xbarGlobalAluno').value = professorData.xBarGlobal.toFixed(4);
   document.getElementById('rbarAluno').value = professorData.rBarGlobal.toFixed(4);
   document.getElementById('sigmaAluno').value = professorData.sigma_viaR.toFixed(4);
-  // preencher s, Pp/Ppk e Cp/Cpk nos campos visíveis (aluno verá overwritten values)
+  // preenche s e Pp/Ppk/Cp/Cpk se disponíveis
   if(professorData.s !== undefined) document.getElementById('sAluno').value = professorData.s.toFixed(4);
   if(professorData.cp !== null){
     document.getElementById('cpAluno').value = professorData.cp.toFixed(4);
@@ -474,51 +467,9 @@ function preencherTabelaProfessor(){
   alert('Tabela e campos preenchidos com valores do professor.');
 }
 
-/* ---------- PDFs ---------- */
-
-// Gerar PDF do professor (detalhado, com valores corretos e comparações)
-function gerarPDFProfessor(){
-  if(!professorActive || !professorData){ alert('Ative o professor e calcule os valores antes.'); return; }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const name = document.getElementById('studentName').value || 'Aluno';
-  let y = 12;
-  doc.setFontSize(14);
-  doc.text(`Relatório (Professor) — ${name}`, 10, y); y += 8;
-  doc.setFontSize(11);
-  // header: basic info
-  doc.text(`Amostras (n=${n}, k=${k})`, 10, y); y += 8;
-  // list samples
-  for(let i=0;i<k;i++){
-    const arr = XarrAll[i] || [];
-    const alunoXbar = parseFloat(document.getElementById(`media_${i}`).value) || NaN;
-    const alunoR = parseFloat(document.getElementById(`r_${i}`).value) || NaN;
-    const profXbar = professorData.medias[i];
-    const profR = professorData.rs[i];
-    doc.text(`Amostra ${i+1}: [${arr.join(', ')}]`, 10, y); y += 6;
-    doc.text(`  X̄ Aluno: ${isNaN(alunoXbar)?'n/d':alunoXbar.toFixed(4)}  X̄ Prof: ${profXbar.toFixed(4)}`, 10, y); y += 6;
-    doc.text(`  R Aluno: ${isNaN(alunoR)?'n/d':alunoR.toFixed(4)}     R Prof: ${profR.toFixed(4)}`, 10, y); y += 8;
-    if(y > 270){ doc.addPage(); y = 12; }
-  }
-  // globals
-  doc.text(`X̄ global (prof): ${professorData.xBarGlobal.toFixed(4)}`, 10, y); y += 6;
-  doc.text(`R̄ (prof): ${professorData.rBarGlobal.toFixed(4)}`, 10, y); y += 6;
-  doc.text(`σ via R̄/d2 (prof): ${professorData.sigma_viaR.toFixed(4)}`, 10, y); y += 6;
-  doc.text(`s (desvio amostral, professor): ${professorData.s.toFixed(4)}`, 10, y); y += 6;
-  if(professorData.cp !== null){
-    doc.text(`Cp (prof): ${professorData.cp.toFixed(4)}   Cpk (prof): ${professorData.cpk.toFixed(4)}`, 10, y); y += 6;
-    doc.text(`Pp (prof): ${professorData.pp.toFixed(4)}   Ppk (prof): ${professorData.ppk.toFixed(4)}`, 10, y); y += 8;
-  } else {
-    doc.text(`Cp/Cpk/Pp/Ppk: limites (LSL/USL) não informados — não calculados`, 10, y); y += 8;
-  }
-  // nota (recalcular)
-  mostrarNota(); // atualiza feedbackFinal
-  doc.text(`Nota final: ${document.getElementById('feedbackFinal').innerText.replace('Nota final: ','')}`, 10, y); y += 6;
-  doc.save(`${name}_Relatorio_Professor.pdf`);
-}
-
-// Gerar PDF do aluno (simples, com tabela, feedback e nota)
+/* ---------- PDFs: Aluno e Professor ---------- */
 function gerarPDFAluno(){
+  // monta relatório simples com as entradas do aluno e feedbacks
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const name = document.getElementById('studentName').value || 'Aluno';
@@ -526,33 +477,82 @@ function gerarPDFAluno(){
   doc.setFontSize(14);
   doc.text(`Relatório do Aluno — ${name}`, 10, y); y += 8;
   doc.setFontSize(11);
-  // tabela amostras
   doc.text(`Amostras (n=${n}, k=${k})`, 10, y); y += 8;
+
+  // garantir que XarrAll esteja atualizado (tenta ler a tabela)
+  refreshXarrFromTable();
+
   for(let i=0;i<k;i++){
     const arr = XarrAll[i] || [];
-    const alunoXbar = parseFloat(document.getElementById(`media_${i}`).value);
+    const alunoX = parseFloat(document.getElementById(`media_${i}`).value);
     const alunoR = parseFloat(document.getElementById(`r_${i}`).value);
     doc.text(`Amostra ${i+1}: [${arr.join(', ')}]`, 10, y); y += 6;
-    doc.text(`  X̄ (aluno): ${isNaN(alunoXbar)?'n/d':alunoXbar.toFixed(4)}   R (aluno): ${isNaN(alunoR)?'n/d':alunoR.toFixed(4)}`, 10, y); y += 8;
-    if(y > 270){ doc.addPage(); y = 12; }
+    doc.text(`  X̄ (aluno): ${isNaN(alunoX)?'n/d':alunoX.toFixed(4)}   R (aluno): ${isNaN(alunoR)?'n/d':alunoR.toFixed(4)}`, 10, y); y += 8;
+    if(y > 265){ doc.addPage(); y = 12; }
   }
+
   // feedbacks
   doc.text('Feedbacks:', 10, y); y += 6;
-  const fbMedias = document.getElementById('feedbackMedias').innerText || '';
-  const fbGlobals = document.getElementById('feedbackGlobals').innerText || '';
-  const fbCp = document.getElementById('feedbackCpCpkAluno').innerText || '';
-  const fbS = document.getElementById('feedbackS').innerText || '';
-  const fbPp = document.getElementById('feedbackPpPpk').innerText || '';
-  const combined = [fbMedias, fbGlobals, fbCp, fbS, fbPp].filter(s=>s).join('\n\n');
-  doc.text(combined, 10, y);
-  y += (combined.split('\n').length + 2) * 6;
+  const fb1 = document.getElementById('feedbackMedias').innerText || '';
+  const fb2 = document.getElementById('feedbackGlobals').innerText || '';
+  const fb3 = document.getElementById('feedbackCpCpkAluno').innerText || '';
+  const fb4 = document.getElementById('feedbackS').innerText || '';
+  const fb5 = document.getElementById('feedbackPpPpk').innerText || '';
+  const combined = [fb1, fb2, fb3, fb4, fb5].filter(s=>s).join('\n\n');
+  doc.setFontSize(10);
+  doc.text(combined || 'Sem feedbacks ainda.', 10, y);
+  y += (combined.split('\n').length + 2) * 5;
+
   // nota
-  mostrarNota();
-  doc.text(`\nNota final: ${document.getElementById('feedbackFinal').innerText.replace('Nota final: ','')}`, 10, y+6);
+  mostrarNota(); // atualiza feedbackFinal
+  doc.setFontSize(12);
+  doc.text(document.getElementById('feedbackFinal').innerText || '', 10, y+6);
+
   doc.save(`${name}_Relatorio_Aluno.pdf`);
 }
 
-/* ---------- Nota ---------- */
+function gerarPDFProfessor(){
+  if(!professorActive || !professorData){ alert('Ative o professor e calcule os valores antes de gerar PDF.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const name = document.getElementById('studentName').value || 'Aluno';
+  let y = 12;
+  doc.setFontSize(14);
+  doc.text(`Relatório (Professor) — ${name}`, 10, y); y += 8;
+  doc.setFontSize(11);
+  doc.text(`Amostras (n=${n}, k=${k})`, 10, y); y += 8;
+
+  // lista amostras com comparação aluno x professor
+  for(let i=0;i<k;i++){
+    const arr = XarrAll[i] || [];
+    const alunoX = parseFloat(document.getElementById(`media_${i}`).value);
+    const alunoR = parseFloat(document.getElementById(`r_${i}`).value);
+    const profX = professorData.medias[i];
+    const profR = professorData.rs[i];
+    doc.text(`Amostra ${i+1}: [${arr.join(', ')}]`, 10, y); y += 6;
+    doc.text(`  X̄ Aluno: ${isNaN(alunoX)?'n/d':alunoX.toFixed(4)}   X̄ Prof: ${profX.toFixed(4)}`, 10, y); y += 6;
+    doc.text(`  R Aluno: ${isNaN(alunoR)?'n/d':alunoR.toFixed(4)}     R Prof: ${profR.toFixed(4)}`, 10, y); y += 8;
+    if(y > 265){ doc.addPage(); y = 12; }
+  }
+
+  doc.text(`X̄ global (prof): ${professorData.xBarGlobal.toFixed(4)}`, 10, y); y += 6;
+  doc.text(`R̄ (prof): ${professorData.rBarGlobal.toFixed(4)}`, 10, y); y += 6;
+  doc.text(`σ via R̄/d₂ (prof): ${professorData.sigma_viaR.toFixed(4)}`, 10, y); y += 6;
+  doc.text(`s (desvio amostral, prof): ${professorData.s.toFixed(4)}`, 10, y); y += 6;
+  if(professorData.cp !== null){
+    doc.text(`Cp (prof): ${professorData.cp.toFixed(4)}   Cpk (prof): ${professorData.cpk.toFixed(4)}`, 10, y); y += 6;
+    doc.text(`Pp (prof): ${professorData.pp.toFixed(4)}   Ppk (prof): ${professorData.ppk.toFixed(4)}`, 10, y); y += 6;
+  } else {
+    doc.text('Cp/Cpk/Pp/Ppk: limites (LSL/USL) não informados — não calculados', 10, y); y += 6;
+  }
+
+  mostrarNota(); // atualiza feedbackFinal
+  doc.text(document.getElementById('feedbackFinal').innerText || '', 10, y+6);
+
+  doc.save(`${name}_Relatorio_Professor.pdf`);
+}
+
+/* ---------- Nota (0-100) ---------- */
 function mostrarNota(){
   // pesos:
   // amostras: 35%
@@ -562,63 +562,63 @@ function mostrarNota(){
   // Pp/Ppk: 15%
   let nota = 0;
 
-  // A: amostras corretas
+  // A: amostras corretas (por amostra, X̄ e R juntos)
   let acertosA = 0;
   for(let i=0;i<k;i++){
-    const arr = XarrAll[i] || [];
-    if(arr.length !== n) continue;
-    const calcXbar = xbars[i];
+    if(!XarrAll[i]) continue;
+    const calcX = xbars[i];
     const calcR = Rs[i];
-    const alunoXbar = parseFloat(document.getElementById(`media_${i}`).value) || 0;
-    const alunoR = parseFloat(document.getElementById(`r_${i}`).value) || 0;
-    if(Math.abs(alunoXbar - calcXbar) <= TOL && Math.abs(alunoR - calcR) <= TOL) acertosA++;
+    const alunoX = parseFloat(document.getElementById(`media_${i}`).value);
+    const alunoR = parseFloat(document.getElementById(`r_${i}`).value);
+    if(!isNaN(alunoX) && !isNaN(alunoR) && Math.abs(alunoX - calcX) <= TOL && Math.abs(alunoR - calcR) <= TOL) acertosA++;
   }
-  const scoreA = (acertosA / k) * 35;
-  nota += scoreA;
+  nota += (acertosA / k) * 35;
 
   // B: X̄ global, R̄, σ via R̄/d2
-  const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value) || NaN;
-  const rbarAluno = parseFloat(document.getElementById('rbarAluno').value) || NaN;
-  const sigmaAluno = parseFloat(document.getElementById('sigmaAluno').value) || NaN;
+  const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value);
+  const rbarAluno = parseFloat(document.getElementById('rbarAluno').value);
+  const sigmaAluno = parseFloat(document.getElementById('sigmaAluno').value);
   const xbarGlobalCalc = xbars.reduce((a,b)=>a+b,0)/k;
   const rbarCalc = Rs.reduce((a,b)=>a+b,0)/k;
   const sigmaCalc = rbarCalc / (d2_table[n] || d2_table[10]);
-  const okX = Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL;
-  const okR = Math.abs(rbarAluno - rbarCalc) <= TOL;
-  const okS = Math.abs(sigmaAluno - sigmaCalc) <= TOL;
-  if(okX && okR && okS) nota += 20;
+  if(!isNaN(xbarGlobalAluno) && !isNaN(rbarAluno) && !isNaN(sigmaAluno) &&
+     Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL &&
+     Math.abs(rbarAluno - rbarCalc) <= TOL &&
+     Math.abs(sigmaAluno - sigmaCalc) <= TOL) {
+    nota += 20;
+  }
 
-  // C: Cp / Cpk
+  // C: Cp / Cpk (cada um vale metade da parte C)
   let scoreC = 0;
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
   if(!isNaN(lsl) && !isNaN(usl)){
-    const cpAluno = parseFloat(document.getElementById('cpAluno').value) || NaN;
-    const cpkAluno = parseFloat(document.getElementById('cpkAluno').value) || NaN;
+    const cpAluno = parseFloat(document.getElementById('cpAluno').value);
+    const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
     const cpCalc = (usl - lsl) / (6 * sigmaCalc);
     const cpkCalc = Math.min((usl - xbarGlobalCalc) / (3 * sigmaCalc), (xbarGlobalCalc - lsl) / (3 * sigmaCalc));
-    if(Math.abs(cpAluno - cpCalc) <= TOL) scoreC += 7.5; // part of 15
-    if(Math.abs(cpkAluno - cpkCalc) <= TOL) scoreC += 7.5;
+    if(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) scoreC += 7.5;
+    if(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) scoreC += 7.5;
   }
   nota += scoreC;
 
-  // D: s (desvio amostral usando todas as observações)
+  // D: s (desvio amostral com todas as observações) — 15 pontos
   let scoreD = 0;
-  const sAluno = parseFloat(document.getElementById('sAluno').value) || NaN;
+  const sAluno = parseFloat(document.getElementById('sAluno').value);
   const todas = [].concat(...XarrAll);
   if(todas.length === n*k){
     const N = todas.length;
     const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
     let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
     const sCalc = Math.sqrt(soma / (N - 1));
-    if(Math.abs(sAluno - sCalc) <= TOL) scoreD = 15;
+    if(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) scoreD = 15;
   }
   nota += scoreD;
 
-  // E: Pp / Ppk
+  // E: Pp / Ppk (cada 7.5 pontos)
   let scoreE = 0;
-  const ppAluno = parseFloat(document.getElementById('ppAluno').value) || NaN;
-  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value) || NaN;
+  const ppAluno = parseFloat(document.getElementById('ppAluno').value);
+  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
   if(!isNaN(lsl) && !isNaN(usl) && todas.length === n*k){
     const N = todas.length;
     const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
@@ -626,37 +626,47 @@ function mostrarNota(){
     const sCalc = Math.sqrt(soma / (N - 1));
     const ppCalc = (usl - lsl) / (6 * sCalc);
     const ppkCalc = Math.min((usl - mediaGlobal) / (3 * sCalc), (mediaGlobal - lsl) / (3 * sCalc));
-    if(Math.abs(ppAluno - ppCalc) <= TOL) scoreE += 7.5;
-    if(Math.abs(ppkAluno - ppkCalc) <= TOL) scoreE += 7.5;
+    if(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) scoreE += 7.5;
+    if(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) scoreE += 7.5;
   }
   nota += scoreE;
 
-  // finalize
   const notaFinal = Math.round(nota * 10) / 10;
   document.getElementById('feedbackFinal').innerText = `Nota final: ${notaFinal.toFixed(1)} / 100`;
 }
 
-/* ---------- Util: atualizar XarrAll se aluno editou tabela sem clicar em verificar ---------- */
+/* ---------- Util: ler tabela caso aluno não tenha clicado em verificar ---------- */
 function refreshXarrFromTable(){
-  // read table cells to update XarrAll in case student filled values but didn't click verificar
   if(!k || !n) return;
   const tmp = [];
   for(let i=0;i<k;i++){
-    let arr=[];
+    const row = [];
     for(let j=0;j<n;j++){
-      const v = parseFloat(document.getElementById(`cell_${i}_${j}`).value);
-      if(isNaN(v)) { arr = null; break; }
-      arr.push(v);
+      const raw = document.getElementById(`cell_${i}_${j}`).value;
+      const v = parseFloat(raw);
+      if(isNaN(v)) return; // incomplete
+      row.push(v);
     }
-    if(!arr) { XarrAll = []; return; }
-    tmp.push(arr);
+    tmp.push(row);
   }
   XarrAll = tmp;
+  // recompute xbars and Rs local copy
+  xbars = []; Rs = [];
+  for(let i=0;i<k;i++){
+    const arr = XarrAll[i];
+    const mx = arr.reduce((a,b)=>a+b,0)/n;
+    const r = Math.max(...arr) - Math.min(...arr);
+    xbars.push(mx); Rs.push(r);
+  }
 }
 
-/* optional: periodically refresh XarrAll if professor active and table filled */
-setInterval(()=>{ if(professorActive) refreshXarrFromTable(); }, 1500);
+/* periodic refresh to keep XarrAll updated if professor active */
+setInterval(()=>{ if(professorActive) refreshXarrFromTable(); }, 1200);
+
+/* ---------- Inicialização segura ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{ /* nothing now */ });
 
 </script>
 </body>
 </html>
+
