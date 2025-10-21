@@ -405,7 +405,7 @@ function verificarPpmAluno(){
   const ppmTotal = ppmInf + ppmSup;
   const ppmAluno = parseFloat(document.getElementById('ppmAluno').value);
 
-  const ok = !isNaN(ppmAluno) && Math.abs(ppmAluno - ppmTotal) <= TOL;
+  const ok = !isNaN(ppmAluno) && Math.abs(ppmAluno - ppmTotal)*1e-6 <= TOL;
   document.getElementById('feedbackPPM').innerText = ok ? `✔️ PPM total correto (esperado ${ppmTotal.toFixed(1)} ppm)` : `❌ PPM total incorreto (esperado ${ppmTotal.toFixed(1)} ppm)`;
 }
 
@@ -723,7 +723,7 @@ function mostrarNota(){
     const zInf = (lsl - mediaGlobal) / sCalc;
     const zSup = (usl - mediaGlobal) / sCalc;
     const ppmCalc = tailPpmBelow(zInf) + tailPpmAbove(zSup);
-    if(!isNaN(ppmAluno) && Math.abs(ppmAluno - ppmCalc) <= TOL) scoreF = 10;
+    if(!isNaN(ppmAluno) && Math.abs(ppmAluno - ppmCalc)*1e-6 <= TOL) scoreF = 10;
   }
   nota += scoreF;
 
