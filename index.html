@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Capabilidade do Processo — Aluno & Professor</title>
+<title>Capabilidade do Processo — Aluno & Professor (com PPM)</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:18px;color:#222}
   h1{text-align:center;margin-bottom:8px}
@@ -105,6 +105,17 @@
   <div id="feedbackPpPpk" class="feedback"></div>
 </div>
 
+<!-- Aluno: PPM total (passo 6) -->
+<div class="step" id="step6" style="display:none">
+  <h3>6) Proporção fora da especificação (PPM total) — aluno</h3>
+  <div class="small">Calcule o PPM total (soma das duas caudas) considerando distribuição normal com média = média real e σ = s (desvio amostral global). Resultado em ppm (partes por milhão), 1 casa decimal.</div>
+  <div class="row" style="margin-top:8px">
+    <label>PPM total (aluno): <input type="number" id="ppmAluno" step="0.1" class="wide"></label>
+    <button onclick="verificarPpmAluno()">Verificar PPM</button>
+  </div>
+  <div id="feedbackPPM" class="feedback"></div>
+</div>
+
 <!-- Módulo Professor -->
 <div class="step" id="stepProfessor">
   <h3>Módulo Professor (protegido)</h3>
@@ -127,7 +138,7 @@
     <button onclick="gerarPDFAluno()" class="secondary">Gerar relatório do aluno (PDF)</button>
   </div>
   <div id="feedbackFinal" class="feedback"></div>
-  <div class="small">Pesos: amostras 35%, X̄/R/σ 20%, Cp/Cpk 15%, s 15%, Pp/Ppk 15% (total 100).</div>
+  <div class="small">Pesos: amostras 30%, X̄/R/σ 20%, Cp/Cpk 15%, s 15%, Pp/Ppk 10%, PPM 10% (total 100).</div>
 </div>
 
 <script>
@@ -142,6 +153,37 @@ let xbars = [];   // valores corretos X̄ por amostra (calculados)
 let Rs = [];      // valores corretos R por amostra (calculados)
 let professorActive = false;
 let professorData = null;
+
+/* ---------- Helpers: normal CDF via erf approximation ---------- */
+/* Abramowitz & Stegun approximation for erf */
+function erf(x){
+  // constants
+  const a1 =  0.254829592;
+  const a2 = -0.284496736;
+  const a3 =  1.421413741;
+  const a4 = -1.453152027;
+  const a5 =  1.061405429;
+  const p  =  0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const t = 1.0/(1.0 + p*x);
+  const y = 1.0 - ((((a5*t + a4)*t + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+  return sign*y;
+}
+function normalCdf(z){
+  return 0.5*(1 + erf(z / Math.SQRT2));
+}
+/* ppm from z: tail probability * 1e6 */
+function tailPpmAbove(z){
+  // probability above z = 1 - Phi(z)
+  const prob = 1 - normalCdf(z);
+  return prob * 1e6;
+}
+function tailPpmBelow(z){
+  // probability below z = Phi(z)
+  const prob = normalCdf(z);
+  return prob * 1e6;
+}
 
 /* ---------- Funções: geração/controle da tabela ---------- */
 function gerarTabela(){
@@ -173,11 +215,13 @@ function gerarTabela(){
   document.getElementById('step3').style.display = 'none';
   document.getElementById('step4').style.display = 'none';
   document.getElementById('step5').style.display = 'none';
+  document.getElementById('step6').style.display = 'none';
   document.getElementById('feedbackMedias').innerText = '';
   document.getElementById('feedbackGlobals').innerText = '';
   document.getElementById('feedbackCpCpkAluno').innerText = '';
   document.getElementById('feedbackS').innerText = '';
   document.getElementById('feedbackPpPpk').innerText = '';
+  document.getElementById('feedbackPPM').innerText = '';
 }
 
 /* Preencher exemplo rápido */
@@ -185,7 +229,8 @@ function preencherExemplo(){
   if(!k || !n){ alert('Gere a tabela primeiro.'); return; }
   for(let i=0;i<k;i++){
     for(let j=0;j<n;j++){
-      const val = 1000 + (i*0.5) + (j-2)*(0.4); // variação
+      // exemplo: use valores próximos de 1000 com variação
+      const val = 1000 + (i*0.5) + (j-2)*(0.4);
       document.getElementById(`cell_${i}_${j}`).value = val.toFixed(3);
     }
     document.getElementById(`media_${i}`).value = '';
@@ -226,7 +271,7 @@ function verificarMediasER(){
     const xOk = !isNaN(alunoX) && Math.abs(alunoX - calcXbar) <= TOL;
     const rOk = !isNaN(alunoR) && Math.abs(alunoR - calcR) <= TOL;
 
-    feedbackLines.push(`Amostra ${i+1}: X̄ ${xOk ? 'correto' : `incorreto`}, R ${rOk ? 'correto' : `incorreto`}`);
+    feedbackLines.push(`Amostra ${i+1}: X̄ ${xOk ? '✔️ correto' : `❌ incorreto`}, R ${rOk ? '✔️ correto' : `❌ incorreto`}`);
   }
 
   if(!allFilled){
@@ -236,7 +281,7 @@ function verificarMediasER(){
 
   document.getElementById('feedbackMedias').innerText = feedbackLines.join('\n');
 
-  // desbloqueia próxima etapa mesmo se houver erros, para permitir correção - porém o aluno só avança se quiser
+  // desbloqueia próxima etapa (aluno pode prosseguir mesmo que haja erros)
   document.getElementById('step2').style.display = 'block';
 }
 
@@ -253,9 +298,9 @@ function verificarGlobalsAluno(){
   const sigmaCalc = rbarCalc / d2;
 
   let fb = [];
-  fb.push(`X̄ global: ${(!isNaN(xbarGlobalAluno) && Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL) ? 'correto' : `incorreto`}`);
-  fb.push(`R̄: ${(!isNaN(rbarAluno) && Math.abs(rbarAluno - rbarCalc) <= TOL) ? 'correto' : `incorreto`}`);
-  fb.push(`σ (via R̄/d₂): ${(!isNaN(sigmaAluno) && Math.abs(sigmaAluno - sigmaCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`X̄ global: ${(!isNaN(xbarGlobalAluno) && Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
+  fb.push(`R̄: ${(!isNaN(rbarAluno) && Math.abs(rbarAluno - rbarCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
+  fb.push(`σ (via R̄/d₂): ${(!isNaN(sigmaAluno) && Math.abs(sigmaAluno - sigmaCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
 
   document.getElementById('feedbackGlobals').innerText = fb.join('\n');
 
@@ -269,7 +314,7 @@ function verificarCpCpkAluno(){
   if(xbars.length !== k || Rs.length !== k){ alert('Verifique as médias por amostra primeiro.'); return; }
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
-  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LSL e USL.'); return; }
+  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LIE e LSE.'); return; }
 
   const xbarGlobalCalc = xbars.reduce((a,b)=>a+b,0)/k;
   const rbarCalc = Rs.reduce((a,b)=>a+b,0)/k;
@@ -283,8 +328,8 @@ function verificarCpCpkAluno(){
   const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
 
   let fb = [];
-  fb.push(`Cp: ${(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) ? 'correto' : `incorreto`}`);
-  fb.push(`Cpk: ${(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`Cp: ${(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
+  fb.push(`Cpk: ${(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
 
   document.getElementById('feedbackCpCpkAluno').innerText = fb.join('\n');
 }
@@ -302,11 +347,12 @@ function verificarSAluno(){
   const sCalc = Math.sqrt(soma / (N - 1));
 
   const sAluno = parseFloat(document.getElementById('sAluno').value);
-  const fb = `s: ${(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) ? 'correto' : `incorreto`}`;
+  const fb = `s: ${(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`;
   document.getElementById('feedbackS').innerText = fb;
 
   if(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL){
     document.getElementById('step5').style.display = 'block';
+    document.getElementById('step6').style.display = 'block';
   }
 }
 
@@ -331,10 +377,36 @@ function verificarPpPpkAluno(){
   const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
 
   let fb = [];
-  fb.push(`Pp: ${(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) ? 'correto' : `incorreto`}`);
-  fb.push(`Ppk: ${(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`Pp: ${(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) ? '✔️correto' : `❌ incorreto`}`);
+  fb.push(`Ppk: ${(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) ? '✔️ correto' : `❌ incorreto`}`);
 
   document.getElementById('feedbackPpPpk').innerText = fb.join('\n');
+}
+
+/* ---------- Passo 6: PPM total (Aluno) ---------- */
+function verificarPpmAluno(){
+  if(XarrAll.length !== k){ alert('Verifique as amostras primeiro.'); return; }
+  const lsl = parseFloat(document.getElementById('lsl').value);
+  const usl = parseFloat(document.getElementById('usl').value);
+  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LIE e LSE (passo 3).'); return; }
+
+  const todas = [].concat(...XarrAll);
+  const N = todas.length;
+  const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
+  let soma = 0;
+  for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
+  const sCalc = Math.sqrt(soma / (N - 1));
+
+  // z inferior = (LSL - mean) / s; PPM inferior = Phi(z_inf) * 1e6
+  const zInf = (lsl - mediaGlobal) / sCalc;
+  const zSup = (usl - mediaGlobal) / sCalc;
+  const ppmInf = tailPpmBelow(zInf); // parts per million below LSL
+  const ppmSup = tailPpmAbove(zSup);  // parts per million above USL
+  const ppmTotal = ppmInf + ppmSup;
+  const ppmAluno = parseFloat(document.getElementById('ppmAluno').value);
+
+  const ok = !isNaN(ppmAluno) && Math.abs(ppmAluno - ppmTotal) <= TOL;
+  document.getElementById('feedbackPPM').innerText = ok ? `✔️ PPM total correto (esperado ${ppmTotal.toFixed(1)} ppm)` : `❌ PPM total incorreto (esperado ${ppmTotal.toFixed(1)} ppm)`;
 }
 
 /* ---------- Professor: ativar, calcular e preencher ---------- */
@@ -401,22 +473,26 @@ function computeProfessorData(){
   let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobalTodas, 2);
   const s = Math.sqrt(soma / (N - 1));
 
-  // Cp/Cpk e Pp/Ppk se limites informados
+  // Cp/Cpk e Pp/Ppk e PPM se limites informados
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
-  let cp = null, cpk = null, pp = null, ppk = null;
+  let cp = null, cpk = null, pp = null, ppk = null, ppmTotal = null;
   if(!isNaN(lsl) && !isNaN(usl)){
     cp = (usl - lsl) / (6 * sigma_viaR);
     cpk = Math.min((usl - xBarGlobal) / (3 * sigma_viaR), (xBarGlobal - lsl) / (3 * sigma_viaR));
     pp = (usl - lsl) / (6 * s);
     ppk = Math.min((usl - mediaGlobalTodas) / (3 * s), (mediaGlobalTodas - lsl) / (3 * s));
+    // PPM total (using s and mediaGlobalTodas)
+    const zInf = (lsl - mediaGlobalTodas) / s;
+    const zSup = (usl - mediaGlobalTodas) / s;
+    ppmTotal = tailPpmBelow(zInf) + tailPpmAbove(zSup);
   }
 
   professorData = {
     medias: xbars.slice(),
     rs: Rs.slice(),
     xBarGlobal, rBarGlobal, sigma_viaR,
-    s, cp, cpk, pp, ppk,
+    s, cp, cpk, pp, ppk, ppmTotal,
     todas, mediaGlobalTodas
   };
 }
@@ -436,8 +512,9 @@ function mostrarValoresProfessor(){
   if(p.cp !== null){
     lines.push(`Cp (prof): ${p.cp.toFixed(4)}   Cpk (prof): ${p.cpk.toFixed(4)}`);
     lines.push(`Pp (prof): ${p.pp.toFixed(4)}   Ppk (prof): ${p.ppk.toFixed(4)}`);
+    lines.push(`PPM total (prof): ${p.ppmTotal.toFixed(1)} ppm`);
   } else {
-    lines.push('Cp/Cpk/Pp/Ppk: limites (LSL/USL) não informados — não calculados');
+    lines.push('Cp/Cpk/Pp/Ppk/PPM: limites (LSL/USL) não informados — não calculados');
   }
   document.getElementById('feedbackProfessor').innerText = lines.join('\n');
 }
@@ -456,13 +533,14 @@ function preencherTabelaProfessor(){
   document.getElementById('xbarGlobalAluno').value = professorData.xBarGlobal.toFixed(4);
   document.getElementById('rbarAluno').value = professorData.rBarGlobal.toFixed(4);
   document.getElementById('sigmaAluno').value = professorData.sigma_viaR.toFixed(4);
-  // preenche s e Pp/Ppk/Cp/Cpk se disponíveis
+  // preenche s, Pp/Ppk e Cp/Cpk e PPM se disponíveis
   if(professorData.s !== undefined) document.getElementById('sAluno').value = professorData.s.toFixed(4);
   if(professorData.cp !== null){
     document.getElementById('cpAluno').value = professorData.cp.toFixed(4);
     document.getElementById('cpkAluno').value = professorData.cpk.toFixed(4);
     document.getElementById('ppAluno').value = professorData.pp.toFixed(4);
     document.getElementById('ppkAluno').value = professorData.ppk.toFixed(4);
+    document.getElementById('ppmAluno').value = professorData.ppmTotal.toFixed(1);
   }
   alert('Tabela e campos preenchidos com valores do professor.');
 }
@@ -498,7 +576,8 @@ function gerarPDFAluno(){
   const fb3 = document.getElementById('feedbackCpCpkAluno').innerText || '';
   const fb4 = document.getElementById('feedbackS').innerText || '';
   const fb5 = document.getElementById('feedbackPpPpk').innerText || '';
-  const combined = [fb1, fb2, fb3, fb4, fb5].filter(s=>s).join('\n\n');
+  const fb6 = document.getElementById('feedbackPPM').innerText || '';
+  const combined = [fb1, fb2, fb3, fb4, fb5, fb6].filter(s=>s).join('\n\n');
   doc.setFontSize(10);
   doc.text(combined || 'Sem feedbacks ainda.', 10, y);
   y += (combined.split('\n').length + 2) * 5;
@@ -542,8 +621,9 @@ function gerarPDFProfessor(){
   if(professorData.cp !== null){
     doc.text(`Cp (prof): ${professorData.cp.toFixed(4)}   Cpk (prof): ${professorData.cpk.toFixed(4)}`, 10, y); y += 6;
     doc.text(`Pp (prof): ${professorData.pp.toFixed(4)}   Ppk (prof): ${professorData.ppk.toFixed(4)}`, 10, y); y += 6;
+    doc.text(`PPM total (prof): ${professorData.ppmTotal.toFixed(1)} ppm`, 10, y); y += 6;
   } else {
-    doc.text('Cp/Cpk/Pp/Ppk: limites (LSL/USL) não informados — não calculados', 10, y); y += 6;
+    doc.text('Cp/Cpk/Pp/Ppk/PPM: limites (LSL/USL) não informados — não calculados', 10, y); y += 6;
   }
 
   mostrarNota(); // atualiza feedbackFinal
@@ -555,11 +635,12 @@ function gerarPDFProfessor(){
 /* ---------- Nota (0-100) ---------- */
 function mostrarNota(){
   // pesos:
-  // amostras: 35%
+  // amostras: 30%
   // X̄/R/σ (globais): 20%
   // Cp/Cpk: 15%
   // s (desvio amostral): 15%
-  // Pp/Ppk: 15%
+  // Pp/Ppk: 10%
+  // PPM: 10%
   let nota = 0;
 
   // A: amostras corretas (por amostra, X̄ e R juntos)
@@ -572,7 +653,7 @@ function mostrarNota(){
     const alunoR = parseFloat(document.getElementById(`r_${i}`).value);
     if(!isNaN(alunoX) && !isNaN(alunoR) && Math.abs(alunoX - calcX) <= TOL && Math.abs(alunoR - calcR) <= TOL) acertosA++;
   }
-  nota += (acertosA / k) * 35;
+  nota += (acertosA / k) * 30;
 
   // B: X̄ global, R̄, σ via R̄/d2
   const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value);
@@ -615,7 +696,7 @@ function mostrarNota(){
   }
   nota += scoreD;
 
-  // E: Pp / Ppk (cada 7.5 pontos)
+  // E: Pp / Ppk (cada metade da parte E = 5 + 5 = 10)
   let scoreE = 0;
   const ppAluno = parseFloat(document.getElementById('ppAluno').value);
   const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
@@ -626,10 +707,25 @@ function mostrarNota(){
     const sCalc = Math.sqrt(soma / (N - 1));
     const ppCalc = (usl - lsl) / (6 * sCalc);
     const ppkCalc = Math.min((usl - mediaGlobal) / (3 * sCalc), (mediaGlobal - lsl) / (3 * sCalc));
-    if(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) scoreE += 7.5;
-    if(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) scoreE += 7.5;
+    if(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) scoreE += 5;
+    if(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) scoreE += 5;
   }
   nota += scoreE;
+
+  // F: PPM total (10 pontos)
+  let scoreF = 0;
+  const ppmAluno = parseFloat(document.getElementById('ppmAluno').value);
+  if(!isNaN(lsl) && !isNaN(usl) && todas.length === n*k){
+    const N = todas.length;
+    const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
+    let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
+    const sCalc = Math.sqrt(soma / (N - 1));
+    const zInf = (lsl - mediaGlobal) / sCalc;
+    const zSup = (usl - mediaGlobal) / sCalc;
+    const ppmCalc = tailPpmBelow(zInf) + tailPpmAbove(zSup);
+    if(!isNaN(ppmAluno) && Math.abs(ppmAluno - ppmCalc) <= TOL) scoreF = 10;
+  }
+  nota += scoreF;
 
   const notaFinal = Math.round(nota * 10) / 10;
   document.getElementById('feedbackFinal').innerText = `Nota final: ${notaFinal.toFixed(1)} / 100`;
@@ -669,3 +765,4 @@ document.addEventListener('DOMContentLoaded', ()=>{ /* nothing now */ });
 </script>
 </body>
 </html>
+
