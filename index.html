@@ -71,8 +71,8 @@
   <h3>3) Limites e Cp / Cpk (aluno calcula manualmente)</h3>
   <div class="small">Informe limites e calcule Cp e Cpk manualmente. O sistema apenas verifica.</div>
   <div class="row">
-    <label>LSL: <input type="number" id="lsl" step="0.001"></label>
-    <label>USL: <input type="number" id="usl" step="0.001"></label>
+    <label>LIE (Limite Inferior de Especificação): <input type="number" id="lsl" step="0.001"></label>
+    <label>LSE (Limite Superior de Especificação): <input type="number" id="usl" step="0.001"></label>
   </div>
   <div class="row" style="margin-top:8px">
     <label>Cp (aluno): <input type="number" id="cpAluno" step="0.001"></label>
@@ -226,7 +226,7 @@ function verificarMediasER(){
     const xOk = !isNaN(alunoX) && Math.abs(alunoX - calcXbar) <= TOL;
     const rOk = !isNaN(alunoR) && Math.abs(alunoR - calcR) <= TOL;
 
-    feedbackLines.push(`Amostra ${i+1}: X̄ ${xOk ? 'correto' : `incorreto (esperado ${calcXbar.toFixed(3)})`}, R ${rOk ? 'correto' : `incorreto (esperado ${calcR.toFixed(3)})`}`);
+    feedbackLines.push(`Amostra ${i+1}: X̄ ${xOk ? 'correto' : `incorreto`}, R ${rOk ? 'correto' : `incorreto`}`);
   }
 
   if(!allFilled){
@@ -253,9 +253,9 @@ function verificarGlobalsAluno(){
   const sigmaCalc = rbarCalc / d2;
 
   let fb = [];
-  fb.push(`X̄ global: ${(!isNaN(xbarGlobalAluno) && Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL) ? 'correto' : `incorreto (esperado ${xbarGlobalCalc.toFixed(4)})`}`);
-  fb.push(`R̄: ${(!isNaN(rbarAluno) && Math.abs(rbarAluno - rbarCalc) <= TOL) ? 'correto' : `incorreto (esperado ${rbarCalc.toFixed(4)})`}`);
-  fb.push(`σ (via R̄/d₂): ${(!isNaN(sigmaAluno) && Math.abs(sigmaAluno - sigmaCalc) <= TOL) ? 'correto' : `incorreto (esperado ${sigmaCalc.toFixed(4)})`}`);
+  fb.push(`X̄ global: ${(!isNaN(xbarGlobalAluno) && Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`R̄: ${(!isNaN(rbarAluno) && Math.abs(rbarAluno - rbarCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`σ (via R̄/d₂): ${(!isNaN(sigmaAluno) && Math.abs(sigmaAluno - sigmaCalc) <= TOL) ? 'correto' : `incorreto`}`);
 
   document.getElementById('feedbackGlobals').innerText = fb.join('\n');
 
@@ -283,8 +283,8 @@ function verificarCpCpkAluno(){
   const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
 
   let fb = [];
-  fb.push(`Cp: ${(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) ? 'correto' : `incorreto (esperado ${cpCalc.toFixed(4)})`}`);
-  fb.push(`Cpk: ${(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) ? 'correto' : `incorreto (esperado ${cpkCalc.toFixed(4)})`}`);
+  fb.push(`Cp: ${(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`Cpk: ${(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) ? 'correto' : `incorreto`}`);
 
   document.getElementById('feedbackCpCpkAluno').innerText = fb.join('\n');
 }
@@ -302,7 +302,7 @@ function verificarSAluno(){
   const sCalc = Math.sqrt(soma / (N - 1));
 
   const sAluno = parseFloat(document.getElementById('sAluno').value);
-  const fb = `s: ${(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) ? 'correto' : `incorreto (esperado ${sCalc.toFixed(4)})`}`;
+  const fb = `s: ${(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) ? 'correto' : `incorreto`}`;
   document.getElementById('feedbackS').innerText = fb;
 
   if(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL){
@@ -315,7 +315,7 @@ function verificarPpPpkAluno(){
   if(XarrAll.length !== k){ alert('Verifique as amostras primeiro.'); return; }
   const lsl = parseFloat(document.getElementById('lsl').value);
   const usl = parseFloat(document.getElementById('usl').value);
-  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LSL e USL.'); return; }
+  if(isNaN(lsl) || isNaN(usl)){ alert('Informe LIE e LSE.'); return; }
 
   const todas = [].concat(...XarrAll);
   const N = todas.length;
@@ -331,8 +331,8 @@ function verificarPpPpkAluno(){
   const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
 
   let fb = [];
-  fb.push(`Pp: ${(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) ? 'correto' : `incorreto (esperado ${ppCalc.toFixed(4)})`}`);
-  fb.push(`Ppk: ${(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) ? 'correto' : `incorreto (esperado ${ppkCalc.toFixed(4)})`}`);
+  fb.push(`Pp: ${(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) ? 'correto' : `incorreto`}`);
+  fb.push(`Ppk: ${(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) ? 'correto' : `incorreto`}`);
 
   document.getElementById('feedbackPpPpk').innerText = fb.join('\n');
 }
