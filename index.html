@@ -25,9 +25,14 @@
 
 <!-- jsPDF (CDN) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Acrescente isto dentro do <head>, após os outros scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
 </head>
 <body>
 <h1>Monitoramento Passo a Passo — Capabilidade do Processo</h1>
+
+
 <!-- 🔹 Instruções rápidas para o aluno -->
 <div class="step" style="background:#e8f2ff; border-left:5px solid #007bff; padding:10px; font-size:14px;">
   <strong>Instruções rápidas:</strong>
@@ -39,7 +44,7 @@
     <li>5️⃣ No fim, gere seu <b>relatório PDF</b> e veja sua nota.</li>
   </ul>
 </div>
-  
+
 <!-- Aluno: dados iniciais -->
 <div class="step" id="step0">
   <h3>Dados do Estudante (Aluno)</h3>
@@ -418,7 +423,103 @@ function verificarPpmAluno(){
 
   const ok = !isNaN(ppmAluno) && Math.abs(ppmAluno - ppmTotal)*1e-6 <= TOL;
   document.getElementById('feedbackPPM').innerText = ok ? `✔️ PPM total correto (esperado ${ppmTotal.toFixed(1)} ppm)` : `❌ PPM total incorreto (esperado ${ppmTotal.toFixed(1)} ppm)`;
+// gera histograma automaticamente
+gerarHistograma(mediaGlobal, sCalc, lsl, usl);
+
 }
+
+/* ---------- Histograma automático no passo final ---------- */
+function gerarHistograma(mediaGlobal, sCalc, lsl, usl) {
+  // container
+  let container = document.getElementById("histContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "histContainer";
+    container.innerHTML = "<h4>Histograma das Observações</h4><canvas id='histCanvas' height='120'></canvas>";
+    document.getElementById("step6").appendChild(container);
+  }
+
+  const ctx = document.getElementById("histCanvas").getContext("2d");
+
+  // gerar todos os valores
+  const todas = [].concat(...XarrAll);
+  const minVal = Math.min(...todas);
+  const maxVal = Math.max(...todas);
+  const bins = 10;
+  const binWidth = (maxVal - minVal) / bins;
+  const freq = new Array(bins).fill(0);
+
+  // contagem de frequência
+  todas.forEach(v => {
+    let idx = Math.floor((v - minVal) / binWidth);
+    if (idx >= bins) idx = bins - 1;
+    freq[idx]++;
+  });
+
+  const labels = [];
+  for (let i = 0; i < bins; i++) {
+    const low = minVal + i * binWidth;
+    const high = low + binWidth;
+    labels.push(low.toFixed(2) + "–" + high.toFixed(2));
+  }
+
+  // remove gráfico anterior se existir
+  if (window.histChart) window.histChart.destroy();
+
+  // cria novo gráfico
+  window.histChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Frequência",
+        data: freq,
+        backgroundColor: "rgba(54, 162, 235, 0.5)",
+        borderWidth: 1,
+        barPercentage: 1.0,   // <-- diferença 2
+        categoryPercentage: 1.0 // <-- diferença 2
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { title: { display: true, text: "Intervalos de valores" } },
+        y: { title: { display: true, text: "Frequência" }, beginAtZero: true }
+      },
+      plugins: {
+        annotation: {
+          annotations: {
+            lsl: {
+              type: "line",
+              xMin: ((lsl - minVal) / binWidth),
+              xMax: ((lsl - minVal) / binWidth),
+              borderColor: "red",
+              borderWidth: 2,
+              label: { content: "LIE", enabled: true, position: "start" }
+            },
+            linhaMedia: {
+  	      type: "line",
+              xMin: (mediaGlobal - minVal) / binWidth,
+              xMax: (mediaGlobal - minVal) / binWidth,
+              borderColor: "green",
+              borderWidth: 2,
+              label: { content: "Média", enabled: true, position: "top" }
+            },
+            usl: {
+              type: "line",
+              xMin: ((usl - minVal) / binWidth),
+              xMax: ((usl - minVal) / binWidth),
+              borderColor: "red",
+              borderWidth: 2,
+              label: { content: "LSE", enabled: true, position: "end" }
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 
 /* ---------- Professor: ativar, calcular e preencher ---------- */
 function ativarProfessor(){
@@ -776,4 +877,3 @@ document.addEventListener('DOMContentLoaded', ()=>{ /* nothing now */ });
 </script>
 </body>
 </html>
-
