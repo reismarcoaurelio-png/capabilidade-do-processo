@@ -132,6 +132,50 @@
   <div id="feedbackPPM" class="feedback"></div>
 </div>
 
+<!-- Passo 7: Estabilidade (Cpk x Ppk) -->
+<div class="step" id="step7" style="display:none">
+  <h3>7) Estabilidade do processo (Cpk × Ppk)</h3>
+  <p class="small">Selecione a interpretação correta:</p>
+  <select id="respostaEstabilidade">
+    <option value="">-- Selecione --</option>
+    <option value="estavel">Cpk ≈ Ppk → Processo estável</option>
+    <option value="instavel">Ppk ≠ Cpk → Processo instável</option>
+    <option value="outro">Diferença aleatória sem relação com estabilidade</option>
+  </select>
+  <button onclick="verificarEstabilidade()">Verificar</button>
+  <div id="feedbackEstabilidade" class="feedback"></div>
+</div>
+
+<!-- Passo 8: Diferença |Cp − Cpk| ou  |Pp − Ppk| -->
+<div class="step" id="step8" style="display:none">
+  <h3>8) Diferença entre Cp/Cpk e Pp/Ppk</h3>
+  <p class="small">Selecione a interpretação correta:</p>
+  <select id="respostaDifCapacidade">
+    <option value="">-- Selecione --</option>
+    <option value="instavel">|Cp − Cpk| ou |Pp − Ppk|≤ 0,05 → processo bem centralizado</option>
+    <option value="estavel">|Cp − Cpk| ou |Pp − Ppk| entre 0,05 a 0,10 → leve descentralização</option>
+    <option value="semrelacao">|Cp − Cpk| ou |Pp − Ppk|> 0,10 → processo descentralizado</option>
+  </select>
+  <button onclick="verificarDifCapacidade()">Verificar</button>
+  <div id="feedbackDifCapacidade" class="feedback"></div>
+</div>
+
+<!-- Passo 9: Classificação do processo -->
+<div class="step" id="step9" style="display:none">
+  <h3>9) Classificação pela Capabilidade (Ppk)</h3>
+  <p class="small">Selecione a faixa correta de classificação:</p>
+  <select id="respostaClassificacao">
+    <option value="">-- Selecione --</option>
+    <option value="nao">Ppk &lt; 1,00 → Não capaz</option>
+    <option value="marginal">1,00 ≤ Ppk &lt; 1,33 → Capaz marginalmente</option>
+    <option value="capaz">1,33 ≤ Ppk &lt; 1,67 → Capaz</option>
+    <option value="alto">Ppk ≥ 1,67 → Altamente capaz</option>
+  </select>
+  <button onclick="verificarClassificacao()">Verificar</button>
+  <div id="feedbackClassificacao" class="feedback"></div>
+</div>
+
+
 <!-- Módulo Professor -->
 <div class="step" id="stepProfessor">
   <h3>Módulo Professor (protegido)</h3>
@@ -154,7 +198,7 @@
     <button onclick="gerarPDFAluno()" class="secondary">Gerar relatório do aluno (PDF)</button>
   </div>
   <div id="feedbackFinal" class="feedback"></div>
-  <div class="small">Pesos: amostras 30%, X̄/R/σ 20%, Cp/Cpk 15%, s 15%, Pp/Ppk 10%, PPM 10% (total 100).</div>
+  <div class="small">Pesos: amostras 15%, X̄/R/σ 15%, Cp/Cpk 12%, s 12%, Pp/Ppk 10%, PPM 10%, Cpk × Ppk 8%, Cp/Cpk e Pp/Ppk 9%, Capabilidade Ppk 9%  (total 100).</div>
 </div>
 
 <script>
@@ -425,6 +469,9 @@ function verificarPpmAluno(){
   document.getElementById('feedbackPPM').innerText = ok ? `✔️ PPM total correto (esperado ${ppmTotal.toFixed(1)} ppm)` : `❌ PPM total incorreto (esperado ${ppmTotal.toFixed(1)} ppm)`;
 // gera histograma automaticamente
 gerarHistograma(mediaGlobal, sCalc, lsl, usl);
+// após gerar histograma
+document.getElementById('step7').style.display = 'block';
+
 
 }
 
@@ -519,6 +566,80 @@ function gerarHistograma(mediaGlobal, sCalc, lsl, usl) {
     }
   });
 }
+
+
+/* ---------- Passo 7: Estabilidade do processo ---------- */
+function verificarEstabilidade() {
+  const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
+  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
+  const resposta = document.getElementById('respostaEstabilidade').value;
+
+  if (isNaN(cpkAluno) || isNaN(ppkAluno)) {
+    alert('Preencha Cp/Cpk e Pp/Ppk antes de verificar estabilidade.');
+    return;
+  }
+
+  let correta = "";
+  if (Math.abs(cpkAluno - ppkAluno) <= 0.05) correta = "estavel";
+  else if (Math.abs(cpkAluno - ppkAluno) > 0.05) correta = "instavel";
+  else correta = "outro";
+
+  const ok = resposta === correta;
+  document.getElementById("feedbackEstabilidade").innerText =
+    ok ? "✔️ Correto! Interpretação adequada." : "❌ Incorreto. Revise a relação entre Cpk e Ppk.";
+  
+  // libera próximo passo
+  document.getElementById("step8").style.display = "block";
+}
+
+/* ---------- Passo 8: Diferença Cp/Cpk x Pp/Ppk ---------- */
+function verificarDifCapacidade() {
+  const cpAluno = parseFloat(document.getElementById('cpAluno').value);
+  const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
+  const resposta = document.getElementById('respostaDifCapacidade').value;
+
+  if (isNaN(cpAluno) || isNaN(cpkAluno)) {
+    alert('Preencha Cp e Cpk antes de verificar.');
+    return;
+  }
+
+  let correta = "";
+  if (Math.abs(cpAluno - cpkAluno) <= 0.05) correta = "estavel"; // centralizado
+  else if (Math.abs(cpAluno - cpkAluno) <= 0.10) correta = "instavel"; // descentralizado
+  else correta = "semrelacao";
+
+  const ok = resposta === correta;
+  document.getElementById("feedbackDifCapacidade").innerText =
+    ok ? "✔️ Correto! Boa interpretação." : "❌ Incorreto. Lembre-se que Cp e Cpk indicam centralização.";
+  
+  document.getElementById("step9").style.display = "block";
+}
+
+/* ---------- Passo 9: Classificação do processo ---------- */
+function verificarClassificacao() {
+  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
+  const resposta = document.getElementById('respostaClassificacao').value;
+
+  if (isNaN(ppkAluno)) {
+    alert('Informe o Ppk antes de verificar.');
+    return;
+  }
+
+  let correta = "";
+  if (ppkAluno < 1.00) correta = "nao";
+  else if (ppkAluno < 1.33) correta = "marginal";
+  else if (ppkAluno < 1.67) correta = "capaz";
+  else correta = "alto";
+
+  const ok = resposta === correta;
+  document.getElementById("feedbackClassificacao").innerText =
+    ok ? "✔️ Correto!" : "❌ Classificação incorreta.";
+
+  // guarda resultado para cálculo de nota
+  window.classificacaoCorreta = ok;
+}
+
+
 
 
 /* ---------- Professor: ativar, calcular e preencher ---------- */
@@ -745,103 +866,63 @@ function gerarPDFProfessor(){
 }
 
 /* ---------- Nota (0-100) ---------- */
-function mostrarNota(){
-  // pesos:
-  // amostras: 30%
-  // X̄/R/σ (globais): 20%
-  // Cp/Cpk: 15%
-  // s (desvio amostral): 15%
-  // Pp/Ppk: 10%
-  // PPM: 10%
-  let nota = 0;
+/* ---------- Avaliação final do aluno (mostrarNota) ---------- */
+function mostrarNota() {
+  let total = 0;
+  const pesos = [15, 15, 12, 12, 10, 10, 8, 9, 9]; // 9 critérios somando 100
+  let feedback = [];
 
-  // A: amostras corretas (por amostra, X̄ e R juntos)
-  let acertosA = 0;
-  for(let i=0;i<k;i++){
-    if(!XarrAll[i]) continue;
-    const calcX = xbars[i];
-    const calcR = Rs[i];
-    const alunoX = parseFloat(document.getElementById(`media_${i}`).value);
-    const alunoR = parseFloat(document.getElementById(`r_${i}`).value);
-    if(!isNaN(alunoX) && !isNaN(alunoR) && Math.abs(alunoX - calcX) <= TOL && Math.abs(alunoR - calcR) <= TOL) acertosA++;
-  }
-  nota += (acertosA / k) * 30;
+  // Critério 1: Médias e R
+  const mediasOk = document.getElementById('feedbackMedias').innerText.includes('✔️');
+  if (mediasOk) total += pesos[0];
+  feedback.push(`Médias e R: ${mediasOk ? '✔️' : '❌'}`);
 
-  // B: X̄ global, R̄, σ via R̄/d2
-  const xbarGlobalAluno = parseFloat(document.getElementById('xbarGlobalAluno').value);
-  const rbarAluno = parseFloat(document.getElementById('rbarAluno').value);
-  const sigmaAluno = parseFloat(document.getElementById('sigmaAluno').value);
-  const xbarGlobalCalc = xbars.reduce((a,b)=>a+b,0)/k;
-  const rbarCalc = Rs.reduce((a,b)=>a+b,0)/k;
-  const sigmaCalc = rbarCalc / (d2_table[n] || d2_table[10]);
-  if(!isNaN(xbarGlobalAluno) && !isNaN(rbarAluno) && !isNaN(sigmaAluno) &&
-     Math.abs(xbarGlobalAluno - xbarGlobalCalc) <= TOL &&
-     Math.abs(rbarAluno - rbarCalc) <= TOL &&
-     Math.abs(sigmaAluno - sigmaCalc) <= TOL) {
-    nota += 20;
-  }
+  // Critério 2: X̄ global, R̄, σ
+  const globalsOk = document.getElementById('feedbackGlobals').innerText.includes('✔️');
+  if (globalsOk) total += pesos[1];
+  feedback.push(`X̄ global, R̄ e σ: ${globalsOk ? '✔️' : '❌'}`);
 
-  // C: Cp / Cpk (cada um vale metade da parte C)
-  let scoreC = 0;
-  const lsl = parseFloat(document.getElementById('lsl').value);
-  const usl = parseFloat(document.getElementById('usl').value);
-  if(!isNaN(lsl) && !isNaN(usl)){
-    const cpAluno = parseFloat(document.getElementById('cpAluno').value);
-    const cpkAluno = parseFloat(document.getElementById('cpkAluno').value);
-    const cpCalc = (usl - lsl) / (6 * sigmaCalc);
-    const cpkCalc = Math.min((usl - xbarGlobalCalc) / (3 * sigmaCalc), (xbarGlobalCalc - lsl) / (3 * sigmaCalc));
-    if(!isNaN(cpAluno) && Math.abs(cpAluno - cpCalc) <= TOL) scoreC += 7.5;
-    if(!isNaN(cpkAluno) && Math.abs(cpkAluno - cpkCalc) <= TOL) scoreC += 7.5;
-  }
-  nota += scoreC;
+  // Critério 3: Cp/Cpk
+  const cpCpkOk = document.getElementById('feedbackCpCpkAluno').innerText.includes('✔️');
+  if (cpCpkOk) total += pesos[2];
+  feedback.push(`Cp/Cpk: ${cpCpkOk ? '✔️' : '❌'}`);
 
-  // D: s (desvio amostral com todas as observações) — 15 pontos
-  let scoreD = 0;
-  const sAluno = parseFloat(document.getElementById('sAluno').value);
-  const todas = [].concat(...XarrAll);
-  if(todas.length === n*k){
-    const N = todas.length;
-    const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
-    let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
-    const sCalc = Math.sqrt(soma / (N - 1));
-    if(!isNaN(sAluno) && Math.abs(sAluno - sCalc) <= TOL) scoreD = 15;
-  }
-  nota += scoreD;
+  // Critério 4: s
+  const sOk = document.getElementById('feedbackS').innerText.includes('✔️');
+  if (sOk) total += pesos[3];
+  feedback.push(`s: ${sOk ? '✔️' : '❌'}`);
 
-  // E: Pp / Ppk (cada metade da parte E = 5 + 5 = 10)
-  let scoreE = 0;
-  const ppAluno = parseFloat(document.getElementById('ppAluno').value);
-  const ppkAluno = parseFloat(document.getElementById('ppkAluno').value);
-  if(!isNaN(lsl) && !isNaN(usl) && todas.length === n*k){
-    const N = todas.length;
-    const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
-    let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
-    const sCalc = Math.sqrt(soma / (N - 1));
-    const ppCalc = (usl - lsl) / (6 * sCalc);
-    const ppkCalc = Math.min((usl - mediaGlobal) / (3 * sCalc), (mediaGlobal - lsl) / (3 * sCalc));
-    if(!isNaN(ppAluno) && Math.abs(ppAluno - ppCalc) <= TOL) scoreE += 5;
-    if(!isNaN(ppkAluno) && Math.abs(ppkAluno - ppkCalc) <= TOL) scoreE += 5;
-  }
-  nota += scoreE;
+  // Critério 5: Pp/Ppk
+  const ppPpkOk = document.getElementById('feedbackPpPpk').innerText.includes('✔️');
+  if (ppPpkOk) total += pesos[4];
+  feedback.push(`Pp/Ppk: ${ppPpkOk ? '✔️' : '❌'}`);
 
-  // F: PPM total (10 pontos)
-  let scoreF = 0;
-  const ppmAluno = parseFloat(document.getElementById('ppmAluno').value);
-  if(!isNaN(lsl) && !isNaN(usl) && todas.length === n*k){
-    const N = todas.length;
-    const mediaGlobal = todas.reduce((a,b)=>a+b,0)/N;
-    let soma = 0; for(const v of todas) soma += Math.pow(v - mediaGlobal, 2);
-    const sCalc = Math.sqrt(soma / (N - 1));
-    const zInf = (lsl - mediaGlobal) / sCalc;
-    const zSup = (usl - mediaGlobal) / sCalc;
-    const ppmCalc = tailPpmBelow(zInf) + tailPpmAbove(zSup);
-    if(!isNaN(ppmAluno) && Math.abs(ppmAluno - ppmCalc)*1e-6 <= TOL) scoreF = 10;
-  }
-  nota += scoreF;
+  // Critério 6: PPM
+  const ppmOk = document.getElementById('feedbackPPM').innerText.includes('✔️');
+  if (ppmOk) total += pesos[5];
+  feedback.push(`PPM: ${ppmOk ? '✔️' : '❌'}`);
 
-  const notaFinal = Math.round(nota * 10) / 10;
-  document.getElementById('feedbackFinal').innerText = `Nota final: ${notaFinal.toFixed(1)} / 100`;
+  // Critério 7: Estabilidade
+  const estOk = document.getElementById('feedbackEstabilidade').innerText.includes('✔️');
+  if (estOk) total += pesos[6];
+  feedback.push(`Estabilidade: ${estOk ? '✔️' : '❌'}`);
+
+  // Critério 8: Diferença Cp/Cpk x Pp/Ppk
+  const difOk = document.getElementById('feedbackDifCapacidade').innerText.includes('✔️');
+  if (difOk) total += pesos[7];
+  feedback.push(`Diferença Cp/Cpk x Pp/Ppk: ${difOk ? '✔️' : '❌'}`);
+
+  // Critério 9: Classificação Ppk
+  const classOk = document.getElementById('feedbackClassificacao').innerText.includes('✔️');
+  if (classOk) total += pesos[8];
+  feedback.push(`Classificação Ppk: ${classOk ? '✔️' : '❌'}`);
+
+  // Mostra o resultado final
+  const feedbackFinal = document.getElementById('feedbackFinal');
+  feedbackFinal.innerText = feedback.join('\n') + `\n\nNota total: ${total} / 100`;
 }
+
+
 
 /* ---------- Util: ler tabela caso aluno não tenha clicado em verificar ---------- */
 function refreshXarrFromTable(){
